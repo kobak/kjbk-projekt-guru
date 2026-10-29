@@ -90,7 +90,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Build from source
-        run: docker compose build app
+        run: docker build --tag kozos:local .
       - name: Generate isolated environment
         run: |
           docker run --rm --user "$(id -u):$(id -g)" \
@@ -116,8 +116,8 @@ jobs:
           docker compose up -d --wait --wait-timeout 180
           curl --fail --silent --show-error -H 'X-Forwarded-Proto: https' http://127.0.0.1:8094/health/
       - name: Diagnostics
-        if: failure()
+        if: failure() && hashFiles('.env') != ''
         run: docker compose logs --tail=120 app worker db
       - name: Clean isolated volumes
-        if: always()
+        if: always() && hashFiles('.env') != ''
         run: docker compose down -v --remove-orphans

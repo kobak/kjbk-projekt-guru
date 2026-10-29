@@ -16,7 +16,7 @@ cd kjbk-projekt-guru
 A környezetet létrehozhatod Python telepítése nélkül, a Compose frontendtől független képfelépítésével:
 
 ```sh
-docker compose build app
+docker build --tag kozos:local .
 docker run --rm --user "$(id -u):$(id -g)" \
   --mount "type=bind,src=$PWD,dst=/app" \
   --entrypoint python kozos:local scripts/configure.py \
