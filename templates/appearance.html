@@ -1,0 +1,13 @@
+{% load static %}
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#462773">
+<script src="{% static 'theme-init.js' %}"></script>
+{% if request.user.is_authenticated %}
+<script>window.GuruAppearance.apply("{{ request.user.appearance_preference.theme|default:'system'|escapejs }}");</script>
+{% endif %}
+<style>
+:root{color-scheme:light;--canvas:#f5f3f8;--surface:#ffffff;--ink:#1a1a1a;--line:#e3ddeb;--brand:#462773;--link:#462773;--tint:#eee8f5;--error:#b51b19}
+:root[data-theme=dark]{color-scheme:dark;--canvas:#141119;--surface:#201b27;--ink:#f3eff8;--line:#3c3347;--link:#c5abef;--tint:#2c223a;--error:#ff9a98}
+.native-brand img{display:block;width:140px;height:auto}.native-brand .brand-dark{display:none}
+:root[data-theme=dark] .native-brand .brand-light{display:none}:root[data-theme=dark] .native-brand .brand-dark{display:block}
+</style>

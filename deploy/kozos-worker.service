@@ -1,0 +1,25 @@
+[Unit]
+Description=Kozos naptarszinkron es ertesitesek
+After=network.target mariadb.service kozos.service
+
+[Service]
+Type=simple
+User=kozos
+Group=kozos
+WorkingDirectory=/opt/kozos
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/kozos/.venv/bin/python manage.py runworker
+Restart=on-failure
+RestartSec=10
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/kozos/media
+UMask=0077
+MemoryHigh=80M
+MemoryMax=130M
+
+[Install]
+WantedBy=multi-user.target

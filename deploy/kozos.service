@@ -1,0 +1,25 @@
+[Unit]
+Description=Kozos projektkezelo
+After=network.target mariadb.service
+
+[Service]
+Type=simple
+User=kozos
+Group=kozos
+WorkingDirectory=/opt/kozos
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/kozos/.venv/bin/gunicorn config.wsgi:application --no-control-socket --bind 127.0.0.1:8094 --workers 1 --threads 4 --timeout 60 --max-requests 1000 --max-requests-jitter 50 --access-logfile - --access-logformat "%%(m)s %%(U)s %%(s)s"
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/kozos/media
+UMask=0077
+MemoryHigh=140M
+MemoryMax=200M
+
+[Install]
+WantedBy=multi-user.target

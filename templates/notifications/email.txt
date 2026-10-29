@@ -1,0 +1,15 @@
+{% autoescape off %}Szia, {{ name }}!
+
+{{ title }}
+
+Feladat: {{ task_title }}
+Projekt: {{ project_name }}
+{% if due_date %}Határidő: {{ due_date|date:"Y. m. d." }}{% if due_time %} {{ due_time|time:"H:i" }}{% endif %} (Europe/Budapest)
+{% endif %}
+Feladat megnyitása:
+{{ task_url }}
+
+Ezt az automatikus értesítést a kjbk projekt guru küldte.
+Az e-mail- és push-értesítéseket a saját beállításaidban módosíthatod:
+{{ settings_url }}
+{% endautoescape %}

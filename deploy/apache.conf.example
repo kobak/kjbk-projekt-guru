@@ -1,0 +1,14 @@
+# A meglévő WordPress vhostok mellé, külön aldomainre.
+# Szükséges modulok: proxy proxy_http headers ssl
+<VirtualHost *:80>
+    ServerName projekt.sajatdomain.hu
+    ProxyPreserveHost On
+    ProxyPass / http://127.0.0.1:8094/
+    ProxyPassReverse / http://127.0.0.1:8094/
+    RequestHeader set X-Forwarded-Proto "http"
+    LimitRequestBody 27262976
+</VirtualHost>
+# HTTPS: certbot --apache -d projekt.sajatdomain.hu
+# A létrehozott *:443 vhostban legyen:
+# RequestHeader set X-Forwarded-Proto "https"
+# és ugyanaz a ProxyPass / ProxyPassReverse pár.
