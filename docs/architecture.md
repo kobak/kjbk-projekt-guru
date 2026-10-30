@@ -10,6 +10,7 @@
 | `core/views.py`, `core/services.py` | Hitelesített webes API, validálás és közös műveletek |
 | `core/mcp.py`, `core/oauth.py` | MCP és OAuth-metaadatok, kliensregisztráció, erőforrás- és hatókör-ellenőrzés |
 | `core/calendar.py` | Google-események, `.ics` és kézi Google-link; a frissítőtoken titkosítása |
+| `core/appearance.py`, `core/list_order.py` | Személyes nézet, megjelenés, készfeladat-láthatóság és saját, verziózott kézi sorrend |
 | `core/notifications.py`, `core/worker.py` | Személyes csatornaválasztások, határidőjelzések, küldési sor és újrapróbálás |
 | `templates/` | OAuth-belépés/jóváhagyás és e-mail-sablonok |
 | `config/` | Django-beállítások és útvonalak |
@@ -20,6 +21,8 @@
 A webszerver reverse proxyként a Gunicorn/Django folyamathoz továbbítja a kéréseket. A statikus fájlokat WhiteNoise szolgálja ki. A worker ugyanazt az adatbázist és környezetet használja; nagyjából 30 másodpercenként dolgozza fel a naptárszinkront és az értesítéseket. **Egy workerpéldányt futtass.** Nincs Redis/Celery-függőség.
 
 Az adatbázis tartalmazza a felhasználókat, jelszóhasheket, munkateret, projekteket, feladatokat, kommenteket, melléklet-metaadatokat, OAuth-kapcsolatokat, naptárszinkron-állapotot és értesítési sort. A fájlok a `media/` mappában vagy a Docker `attachments` volume-jában vannak. A `.env` tárolja a telepítés titkos kulcsait; adatbázis és csatolmányok önmagukban nem adnak teljes mentést.
+
+Az `AppearancePreference` a fiók témáját, asztali betűméretét/sűrűségét és listabeállításait tárolja. A `PersonalListOrder` felhasználónként külön feladatazonosító-sorrendet és verziót őriz; mozgatáskor nem ír a `Task.position` vagy `Task.version` mezőbe, és nem generál közös tevékenységet vagy értesítést. Az API relatív mozgatást fogad, nem a teljes, esetleg szűrt listával írja felül a rejtett sorokat.
 
 A feladat az elsődleges adat. Az opcionálisan hozzáadott Google-esemény ebből frissül; naptárból visszafelé nincs szerkesztés. Minden felhasználó a saját Google-kapcsolatával dolgozik. A személyes téma és értesítési beállítás csak az adott felhasználó API-ján módosítható.
 

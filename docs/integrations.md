@@ -75,3 +75,20 @@ Az OAuth `issuer` mindenhol pontosan az `APP_URL`. A `/.well-known/oauth-authori
 ## Megjelenés
 
 A fejléc nap/hold/monitor ikonjával vagy a **Beállítások → Saját fiók → Megjelenés** részen választható Világos, Sötét és Rendszer szerint mód. A választás automatikusan a fiókhoz mentődik, másik eszközön a következő bejelentkezéskor/betöltéskor is érvényes. Az alapérték rendszer szerinti; ilyenkor a készülék témaváltását is követi. A helyi gyorsítótár a betöltés eleji felvillanást csökkenti, az elsődleges mentés a szerveren van.
+
+Ugyanitt választható az asztali **Normál/Nagy betűméret**, **Kompakt/Tágas sűrűség**, illetve a **Lista/Kanban alapnézet**. A Normál méret is nagyobb feladatcímeket, listaszöveget és feladatablak-szöveget ad az eredeti változathoz képest. A méret és térköz az asztali nézetet módosítja; a mobil érintőfelülete megmarad. Alapérték: Lista, Normál, Kompakt.
+
+## Lista és saját sorrend
+
+A Tábla/Lista fül váltása automatikusan eltárolja a kiválasztott alapnézetet. A Naptár külön, ideiglenes nézet, nem írja át a Lista/Kanban-választást. Újratöltés, új projekt megnyitása vagy másik eszközön belépés után a saját alapnézeted érvényesül.
+
+A lista felett a **Kész feladatok is** kapcsoló alapból kikapcsolt; ezt is fiókonként mentjük, oldalváltás és a szűrők alaphelyzetbe állítása nem felejti el. Ha az Állapot szűrőben kifejezetten a Kész állapotot választod, a kész feladatokat akkor is megmutatjuk. Ez nem módosítja a mentett láthatósági beállítást. A Kanban Kész oszlopát és a naptárat a listára mentett kapcsoló nem rejti el.
+
+A mentett rendezések:
+
+- **Határidő:** legkorábbi előre, azonos napon az egész napos a pontos időpontok előtt; határidő nélküliek a végén.
+- **Prioritás:** Sürgős → Magas → Normál → Alacsony.
+- **Létrehozás:** legújabb elöl, az eredeti létrehozási idő alapján; szerkesztéstől nem változik meg.
+- **Saját kézi sorrend:** a sor eleji fogantyúval húzható. A fogantyúra fókuszálva a fel/le nyilakkal is átrendezhető. Archivált projektben nem szerkeszthető.
+
+A kézi sorrend egy felhasználó teljes munkaterére vonatkozik; projekt-, keresési és felelősszűrésnél annak látható részét látod. Egy sor áthelyezése a többi, akár rejtett sor egymáshoz képesti sorrendjét megőrzi. Új feladatok a saját kézi sorrend végére kerülnek, törölt feladatok kimaradnak. Más felhasználó sorrendjét, a közös feladat verzióját, naptárát és értesítéseit nem módosítja. Párhuzamos, elavult sorrendmentéskor frissítést kér.

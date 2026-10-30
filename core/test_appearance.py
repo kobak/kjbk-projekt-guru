@@ -4,6 +4,7 @@ from django.contrib.auth.models import User
 from django.test import Client, TestCase, override_settings
 
 from .models import AppearancePreference, Workspace
+from .appearance import DEFAULTS
 
 
 @override_settings(SECURE_SSL_REDIRECT=False, ALLOWED_HOSTS=["testserver", "localhost"], AXES_ENABLED=False)
@@ -19,7 +20,7 @@ class AppearanceTests(TestCase):
 
     def test_default_is_system_without_creating_a_preference_on_read(self):
         result = self.client.get("/api/appearance/").json()
-        self.assertEqual(result, {"theme": "system", "updated_at": None})
+        self.assertEqual(result, {**DEFAULTS, "updated_at": None})
         self.assertFalse(AppearancePreference.objects.exists())
         self.assertEqual(Client().get("/api/session/").json()["appearance"]["theme"], "system")
 
@@ -64,3 +65,34 @@ class AppearanceTests(TestCase):
         self.assertEqual(native.status_code, 200)
         self.assertContains(native, 'window.GuruAppearance.apply("dark")')
         self.assertContains(native, "kjbk-infinity-negative.png")
+
+    def test_personal_task_view_defaults_and_partial_updates(self):
+        self.assertEqual(self.client.get("/api/appearance/").json(), {**DEFAULTS, "updated_at": None})
+        self.choose({"theme": "dark", "font_size": "large", "density": "spacious"})
+        response = self.choose({"default_view": "board", "list_sort": "priority", "show_completed": True})
+        self.assertEqual(response.status_code, 200)
+        stored = self.client.get("/api/session/").json()["appearance"]
+        self.assertEqual({key: stored[key] for key in DEFAULTS}, {"theme": "dark", "font_size": "large", "density": "spacious", "default_view": "board", "list_sort": "priority", "show_completed": True})
+        other = Client()
+        other.force_login(self.bob)
+        self.assertEqual(other.get("/api/appearance/").json(), {**DEFAULTS, "updated_at": None})
+
+    def test_view_preferences_validate_types_and_reject_all_changes_atomically(self):
+        invalid = [{"default_view": "calendar"}, {"density": "dense"}, {"font_size": "small"}, {"list_sort": "title"},
+            {"show_completed": 1}, {"show_completed": "false"}, {"font_size": "large", "show_completed": None},
+            {"default_view": "list", "user_id": self.bob.id}]
+        for value in invalid:
+            with self.subTest(value=value): self.assertEqual(self.choose(value).status_code, 400)
+        self.assertFalse(AppearancePreference.objects.exists())
+
+    def test_sort_and_visibility_survive_new_device_and_theme_changes(self):
+        for sorting in ("due", "priority", "created", "manual"):
+            self.assertEqual(self.choose({"list_sort": sorting}).status_code, 200)
+        self.choose({"show_completed": True, "default_view": "board"})
+        self.choose({"theme": "light"})
+        device = Client()
+        device.force_login(self.alice)
+        data = device.get("/api/bootstrap/").json()["appearance"]
+        self.assertEqual(data["list_sort"], "manual")
+        self.assertTrue(data["show_completed"])
+        self.assertEqual(data["default_view"], "board")

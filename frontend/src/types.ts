@@ -6,7 +6,17 @@ export type Member = {
   active: boolean;
 };
 export type ThemeMode = "system" | "light" | "dark";
-export type Appearance = { theme: ThemeMode; updated_at: string | null };
+export type ListSort = "due" | "priority" | "created" | "manual";
+export type Appearance = {
+  theme: ThemeMode;
+  default_view: "board" | "list";
+  show_completed: boolean;
+  list_sort: ListSort;
+  font_size: "normal" | "large";
+  density: "compact" | "spacious";
+  updated_at: string | null;
+};
+export type ListOrder = { task_ids: string[]; version: number };
 export type Project = {
   id: string;
   name: string;
@@ -29,6 +39,7 @@ export type Task = {
   labels: string[];
   position: number;
   version: number;
+  created_at: string;
   updated_at: string;
   checklist: { id: number; text: string; done: boolean }[];
   comment_count: number;
@@ -71,6 +82,7 @@ export type NotificationPreferences = {
 };
 export type Bootstrap = {
   appearance: Appearance;
+  list_order: ListOrder;
   workspace: string;
   user: Member;
   members: Member[];

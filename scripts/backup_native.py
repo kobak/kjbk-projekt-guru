@@ -32,7 +32,7 @@ try:
     os.chmod(dest / "environment.env", 0o600)
     # A futó példány forrása is kell; a függőségek a lockokból újratelepíthetők.
     source_paths = ["config", "core", "templates", "scripts", "deploy", "docs", "frontend/src", "frontend/public", "frontend/dist",
-        "frontend/index.html", "frontend/package.json", "frontend/package-lock.json", "frontend/tsconfig.json", "frontend/vite.config.ts",
+        "frontend/tests", "frontend/index.html", "frontend/package.json", "frontend/package-lock.json", "frontend/tsconfig.json", "frontend/vite.config.ts",
         "manage.py", "Dockerfile", "compose.yaml", ".env.example", ".gitignore", ".dockerignore", "README.md", "LICENSE", "BRANDING.md",
         "CONTRIBUTING.md", "SECURITY.md", "CHANGELOG.md", "THIRD_PARTY_NOTICES.md", "requirements.txt", "requirements.lock",
         "requirements-mariadb.txt", "requirements-native.lock", ".github"]

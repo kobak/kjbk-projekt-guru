@@ -13,6 +13,7 @@ Ellenőrzések pull request előtt:
 .venv/bin/python manage.py makemigrations --check --dry-run
 .venv/bin/python manage.py test core --noinput
 npm --prefix frontend run build
+npm --prefix frontend test
 git diff --check
 ```
 

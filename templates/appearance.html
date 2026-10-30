@@ -1,9 +1,10 @@
 {% load static %}
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#462773">
-<script src="{% static 'theme-init.js' %}"></script>
+<script src="{% static 'theme-init.js' %}?v=2"></script>
 {% if request.user.is_authenticated %}
 <script>window.GuruAppearance.apply("{{ request.user.appearance_preference.theme|default:'system'|escapejs }}");</script>
+<script>window.GuruAppearance.applyLayout("{{ request.user.appearance_preference.font_size|default:'normal'|escapejs }}", "{{ request.user.appearance_preference.density|default:'compact'|escapejs }}");</script>
 {% endif %}
 <style>
 :root{color-scheme:light;--canvas:#f5f3f8;--surface:#ffffff;--ink:#1a1a1a;--line:#e3ddeb;--brand:#462773;--link:#462773;--tint:#eee8f5;--error:#b51b19}

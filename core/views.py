@@ -25,6 +25,7 @@ from .calendar import SCOPE, cipher, sync_link, calendar_file
 from .notifications import preference_json, save_preferences, email_configured
 from .appearance import appearance_json, save_appearance
 from .members import change_member_email
+from .list_order import list_order_json, save_list_order
 
 def locked_out(request, credentials=None, *args, **kwargs):
     return JsonResponse({"error": "Túl sok sikertelen belépés. Próbáld újra 30 perc múlva."}, status=429)
@@ -69,6 +70,10 @@ def appearance(request):
         return save_appearance(request.user, request.data)
     return appearance_json(request.user)
 
+@api(("GET", "PATCH"))
+def list_order(request):
+    return save_list_order(request.user, request.data) if request.method == "PATCH" else list_order_json(request.user)
+
 @api(("POST",), anonymous=True)
 def login(request):
     email = text(request.data, "email", 254, True).lower()
@@ -107,6 +112,7 @@ def bootstrap(request):
     tasks = task_queryset().order_by("position", "-created_at")
     return {"workspace": ws.name if ws else "Közös munkatér", "user": person(request.user),
         "appearance": appearance_json(request.user),
+        "list_order": list_order_json(request.user),
         "members": [person(u) for u in User.objects.filter(is_active=True).order_by("id")],
         "projects": [project_json(p) for p in Project.objects.order_by("created_at")],
         "tasks": [task_json(t, request.user) for t in tasks],

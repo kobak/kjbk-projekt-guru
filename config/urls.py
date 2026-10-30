@@ -18,6 +18,7 @@ urlpatterns = [
     path("api/session/", views.session), path("api/login/", views.login), path("api/logout/", views.logout),
     path("api/profile/", views.profile), path("api/bootstrap/", views.bootstrap),
     path("api/appearance/", views.appearance),
+    path("api/list-order/", views.list_order),
     path("api/mcp/connections/", views.mcp_connections),
     path("api/projects/", views.projects), path("api/projects/<uuid:project_id>/", views.projects),
     path("api/tasks/", views.create_task), path("api/tasks/<uuid:task_id>/", views.task),

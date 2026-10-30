@@ -1,0 +1,344 @@
+/* Account preferences; mobile keeps its existing touch-oriented type and spacing. */
+:root {
+  --task-text: 14px;
+  --task-meta: 12px;
+  --panel-text: 15px;
+  --task-title-size: 26px;
+  --list-pad: 8px;
+  --list-min-height: 48px;
+  --task-card-pad: 12px;
+  --task-gap: 8px;
+  --section-gap: 20px;
+}
+:root[data-font-size="large"] {
+  --task-text: 16px;
+  --task-meta: 14px;
+  --panel-text: 17px;
+  --task-title-size: 30px;
+}
+:root[data-density="spacious"] {
+  --list-pad: 15px;
+  --list-min-height: 70px;
+  --task-card-pad: 18px;
+  --task-gap: 14px;
+  --section-gap: 30px;
+}
+.appearance-grid {
+  margin-top: 24px;
+  margin-bottom: 16px;
+}
+.appearance-checkbox,
+.list-controls .checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.appearance-checkbox input,
+.list-controls input {
+  margin: 0;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent-foreground);
+}
+.list-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 9px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  font-size: 12px;
+}
+.list-controls > label:first-child {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.list-controls select {
+  width: auto;
+  min-width: 200px;
+  margin: 0;
+  padding: 7px 10px;
+  font-size: 13px;
+}
+.list-controls > span {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.list-order-hint,
+.list-order-message {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 10px 0;
+}
+.list-order-message {
+  color: var(--accent-foreground);
+}
+.list-drag-handle {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 32px;
+  padding: 3px;
+  margin-left: -4px;
+  color: var(--text-muted);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  border-radius: 5px;
+}
+.list-drag-handle:hover,
+.list-drag-handle:focus-visible {
+  background: var(--brand-tint);
+  color: var(--accent-foreground);
+}
+.list-drag-handle:active {
+  cursor: grabbing;
+}
+.list-drag-handle:disabled,
+.list-drag-handle[aria-disabled="true"] {
+  cursor: default;
+  opacity: 0.4;
+}
+.list-dragging {
+  opacity: 0.65;
+  background: var(--brand-tint);
+}
+.list-drop-before {
+  box-shadow: inset 0 3px var(--accent-foreground);
+}
+.list-drop-after {
+  box-shadow: inset 0 -3px var(--accent-foreground);
+}
+@media (min-width: 721px) {
+  .main-content {
+    width: 100%;
+    max-width: none;
+    padding: 24px 24px 0;
+  }
+  .page-heading {
+    margin-bottom: var(--section-gap);
+  }
+  .project-summary {
+    margin-bottom: 16px;
+  }
+  .view-toolbar {
+    margin-bottom: 14px;
+  }
+  .card-title,
+  .table-title,
+  .focus-title > strong {
+    font-size: var(--task-text);
+    line-height: 1.5;
+  }
+  .table-header,
+  .table-row {
+    padding: var(--list-pad) 16px;
+    gap: 14px;
+  }
+  .table-row {
+    min-height: var(--list-min-height);
+    font-size: var(--task-text);
+  }
+  .table-header {
+    font-size: var(--task-meta);
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+  .table-title {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .table-title small {
+    display: inline-block;
+    margin: 0 0 0 9px;
+    font-size: var(--task-meta);
+    line-height: 1.5;
+  }
+  .table-project,
+  .table-date,
+  .table-date > small,
+  .priority-text,
+  .table-assignee {
+    font-size: var(--task-meta);
+    min-width: 0;
+    line-height: 1.5;
+  }
+  .table-project {
+    overflow-wrap: anywhere;
+    overflow: hidden;
+  }
+  .table-assignee > span:last-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .kanban-board {
+    gap: 12px;
+    min-height: 360px;
+  }
+  .kanban-column {
+    padding: 12px 10px;
+    min-height: 140px;
+  }
+  .column-tasks {
+    gap: var(--task-gap);
+  }
+  .column-heading {
+    padding-bottom: 10px;
+  }
+  .column-heading h2 {
+    font-size: var(--task-text);
+  }
+  .column-count {
+    font-size: var(--task-meta);
+    height: auto;
+  }
+  .task-card {
+    padding: var(--task-card-pad);
+  }
+  .task-card-labels {
+    margin-bottom: 6px;
+  }
+  .label-tag,
+  .card-date,
+  .card-count,
+  .card-priority,
+  .card-project {
+    font-size: var(--task-meta);
+  }
+  .card-project {
+    margin-top: 6px;
+  }
+  .add-card {
+    font-size: var(--task-meta);
+  }
+  .list-controls {
+    font-size: var(--task-text);
+  }
+  .list-controls select {
+    font-size: var(--task-text);
+  }
+  .list-controls > span,
+  .list-order-hint,
+  .list-order-message {
+    font-size: var(--task-meta);
+  }
+  .modal.wide {
+    width: min(940px, calc(100vw - 72px));
+  }
+  .modal-heading h2 {
+    font-size: 19px;
+  }
+  .task-form {
+    padding: 20px 24px 0;
+  }
+  .task-form label,
+  .task-form input,
+  .task-form textarea,
+  .task-form select,
+  .checklist-row > span,
+  .inline-add input,
+  .comment p,
+  .attachment-row strong {
+    font-size: var(--panel-text);
+    line-height: 1.5;
+  }
+  .task-form .task-title-input {
+    font-size: var(--task-title-size) !important;
+    padding-bottom: 18px !important;
+  }
+  .task-form > label {
+    margin-bottom: 14px;
+  }
+  .form-grid {
+    gap: 12px 18px;
+    margin-bottom: 16px;
+  }
+  .task-form textarea {
+    min-height: 120px;
+  }
+  .task-tabs > button,
+  .modal-footer .btn,
+  .modal-footer .text-btn {
+    font-size: var(--task-text);
+  }
+  .comment-meta strong,
+  .checklist-section h3,
+  .calendar-box strong {
+    font-size: var(--task-text);
+  }
+  .comment-meta span,
+  .calendar-box p,
+  .form-hint,
+  .attachment-row a > span {
+    font-size: var(--task-meta);
+  }
+  .settings-content label,
+  .settings-section > p {
+    font-size: var(--task-text);
+  }
+  .settings-section .theme-option {
+    font-size: var(--task-text);
+  }
+  :root[data-density="compact"] .stats-grid {
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+  :root[data-density="compact"] .stat-card {
+    min-height: 115px;
+    padding: 16px;
+  }
+  :root[data-density="compact"] .project-card {
+    padding-top: 16px;
+  }
+  :root[data-density="compact"] .focus-task {
+    min-height: 58px;
+  }
+  :root[data-density="compact"] .activity-item {
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+}
+@media (min-width: 1100px) {
+  .table-header,
+  .table-row {
+    grid-template-columns:
+      minmax(240px, 2.8fr) minmax(120px, 1fr) minmax(125px, 0.8fr)
+      minmax(100px, 0.6fr) minmax(130px, 0.9fr);
+  }
+}
+@media (max-width: 720px) {
+  .list-controls {
+    align-items: flex-start;
+    gap: 13px;
+    padding: 12px;
+  }
+  .list-controls > label:first-child {
+    width: 100%;
+  }
+  .list-controls select {
+    flex: 1;
+    min-width: 0;
+    font-size: 14px;
+    min-height: 40px;
+  }
+  .list-controls > span {
+    margin-left: 0;
+    width: 100%;
+  }
+  .list-drag-handle {
+    width: 24px;
+    min-width: 24px;
+    height: 40px;
+  }
+  .manual-list .table-row > div:first-child {
+    gap: 6px;
+  }
+}

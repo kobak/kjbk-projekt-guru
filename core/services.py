@@ -24,7 +24,7 @@ def task_json(t, user, detail=False):
         "status": t.status, "priority": t.priority, "assignee_id": t.assignee_id, "created_by_id": t.created_by_id,
         "due_date": t.due_date.isoformat() if t.due_date else None,
         "due_time": t.due_time.strftime("%H:%M") if t.due_time else None, "labels": t.labels,
-        "position": t.position, "version": t.version, "updated_at": t.updated_at.isoformat(),
+        "position": t.position, "version": t.version, "created_at": t.created_at.isoformat(), "updated_at": t.updated_at.isoformat(),
         "checklist": [{"id": x.id, "text": x.text, "done": x.done} for x in t.checklist.all()],
         "comment_count": t.comments.count(), "attachment_count": t.attachments.count(),
         "calendar": {"enabled": link.enabled, "url": link.event_url, "error": link.error,

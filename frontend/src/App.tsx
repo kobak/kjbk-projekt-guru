@@ -32,7 +32,6 @@ import {
   CalendarCheck,
   AlertCircle,
   RefreshCw,
-  Flag,
   Archive,
   Pencil,
 } from "lucide-react";
@@ -40,6 +39,8 @@ import { api, ApiError, today, dayLabel, relative, isOverdue } from "./api";
 import type {
   Appearance,
   Bootstrap,
+  ListOrder,
+  ListSort,
   Member,
   Project,
   Status,
@@ -47,10 +48,17 @@ import type {
 } from "./types";
 import { Avatar, Modal, StatusMark, statuses, priorities } from "./ui";
 import TaskPanel from "./TaskPanel";
+import TaskList from "./TaskList";
+import { sortListTasks } from "./listSorting";
 import Settings from "./Settings";
 import Brand, { brandProjectColor, projectDisplayColor } from "./Brand";
 import ThemeSwitcher from "./ThemeSwitcher";
-import { resetAppearance, syncAppearance } from "./theme";
+import {
+  chooseAppearance,
+  resetAppearance,
+  syncAppearance,
+  useAppearance,
+} from "./theme";
 
 type Page = "overview" | "projects" | "mine" | "calendar";
 type View = "board" | "list" | "calendar";
@@ -206,12 +214,13 @@ function Login({ onLogin }: { onLogin: () => void }) {
 }
 
 export default function App() {
+  const appearance = useAppearance();
   const [session, setSession] = useState<Member | null | undefined>(undefined),
     [data, setData] = useState<Bootstrap | null>(null),
     [fatal, setFatal] = useState("");
   const [page, setPage] = useState<Page>("overview"),
     [projectId, setProjectId] = useState<string | null>(null),
-    [view, setView] = useState<View>("board"),
+    [view, setView] = useState<View | null>(null),
     [sidebar, setSidebar] = useState(false);
   const [query, setQuery] = useState(""),
     [memberFilter, setMemberFilter] = useState(""),
@@ -252,7 +261,12 @@ export default function App() {
         ...project,
         color: brandProjectColor(project.color),
       }));
-      setData(next);
+      setData((previous) =>
+        previous?.user.id === next.user.id &&
+        previous.list_order.version > next.list_order.version
+          ? { ...next, list_order: previous.list_order }
+          : next,
+      );
       setSession(next.user);
       setFatal("");
     } catch (e) {
@@ -279,6 +293,7 @@ export default function App() {
   useEffect(() => {
     loadSession();
   }, [loadSession]);
+  useEffect(() => setView(null), [appearance.default_view]);
   useEffect(() => {
     if (!session) return;
     const timer = setInterval(() => {
@@ -333,6 +348,7 @@ export default function App() {
     setPriorityFilter("");
     setStatusFilter("");
     setShowDone(true);
+    setView(null);
     window.scrollTo({ top: 0 });
   };
   const updateStatus = async (t: Task, status: Status) => {
@@ -350,6 +366,15 @@ export default function App() {
     }
   };
   const project = data?.projects.find((p) => p.id === projectId);
+  const currentView =
+    page === "calendar" ? "calendar" : view || appearance.default_view;
+  const visibleCompleted =
+    currentView === "list" ? appearance.show_completed : showDone;
+  const changeCompleted = (value: boolean) => {
+    if (!value && statusFilter === "done") setStatusFilter("");
+    if (currentView === "list") chooseAppearance({ show_completed: value });
+    else setShowDone(value);
+  };
   const activeTasks =
     data?.tasks.filter(
       (t) => !data.projects.find((p) => p.id === t.project_id)?.archived,
@@ -372,7 +397,8 @@ export default function App() {
         )
           return false;
         if (priorityFilter && t.priority !== priorityFilter) return false;
-        if (!showDone && t.status === "done") return false;
+        if (!visibleCompleted && statusFilter !== "done" && t.status === "done")
+          return false;
         if (statusFilter && t.status !== statusFilter) return false;
         return (
           !query ||
@@ -388,9 +414,18 @@ export default function App() {
       memberFilter,
       priorityFilter,
       query,
-      showDone,
+      visibleCompleted,
       statusFilter,
     ],
+  );
+  const listTasks = useMemo(
+    () =>
+      sortListTasks(
+        filtered,
+        appearance.list_sort,
+        data?.list_order.task_ids || [],
+      ),
+    [filtered, appearance.list_sort, data?.list_order],
   );
   if (fatal && !data)
     return (
@@ -427,7 +462,6 @@ export default function App() {
     )
     .sort((a, b) => (a.due_date || "9999").localeCompare(b.due_date || "9999"))
     .slice(0, 5);
-  const currentView = page === "calendar" ? "calendar" : view;
   const isOverview = page === "overview" && !query;
   const createTask = (status?: Status) => {
     if (!data.projects.some((p) => !p.archived)) {
@@ -648,7 +682,12 @@ export default function App() {
               <Bell size={19} />
               {data.unread > 0 && <span className="notification-dot" />}
             </button>
-            <ThemeSwitcher />
+            <ThemeSwitcher
+              onSettings={() => {
+                setSettingsInitialTab("profile");
+                setSettingsOpen(true);
+              }}
+            />
           </div>
         </header>
         <main className="main-content">
@@ -1078,8 +1117,11 @@ export default function App() {
                     <button
                       key={v.key}
                       className={currentView === v.key ? "active" : ""}
+                      disabled={appearance.saving}
                       onClick={() => {
-                        setView(v.key);
+                        setView(v.key === "calendar" ? "calendar" : null);
+                        if (v.key !== "calendar")
+                          chooseAppearance({ default_view: v.key });
                         if (page === "calendar") setPage("projects");
                       }}
                     >
@@ -1101,7 +1143,9 @@ export default function App() {
                     {(memberFilter ||
                       priorityFilter ||
                       statusFilter ||
-                      !showDone) && <span className="filter-dot" />}
+                      (currentView !== "list" && !showDone)) && (
+                      <span className="filter-dot" />
+                    )}
                   </button>
                   <button
                     className="icon-btn"
@@ -1123,6 +1167,39 @@ export default function App() {
                   </button>
                 </div>
               </div>
+              {currentView === "list" && (
+                <div className="list-controls">
+                  <label>
+                    Rendezés
+                    <select
+                      value={appearance.list_sort}
+                      disabled={appearance.saving}
+                      onChange={(event) =>
+                        chooseAppearance({
+                          list_sort: event.target.value as ListSort,
+                        })
+                      }
+                    >
+                      <option value="due">Határidő szerint</option>
+                      <option value="priority">Prioritás szerint</option>
+                      <option value="created">Létrehozás: legújabb elöl</option>
+                      <option value="manual">Saját kézi sorrend</option>
+                    </select>
+                  </label>
+                  <label className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={visibleCompleted || statusFilter === "done"}
+                      disabled={appearance.saving}
+                      onChange={(event) =>
+                        changeCompleted(event.target.checked)
+                      }
+                    />
+                    Kész feladatok is
+                  </label>
+                  <span>Automatikusan a fiókodhoz mentve</span>
+                </div>
+              )}
               {filtersOpen && (
                 <div className="filter-panel">
                   <label>
@@ -1160,7 +1237,6 @@ export default function App() {
                       value={statusFilter}
                       onChange={(e) => {
                         setStatusFilter(e.target.value);
-                        if (e.target.value === "done") setShowDone(true);
                       }}
                     >
                       <option value="">Összes állapot</option>
@@ -1171,21 +1247,23 @@ export default function App() {
                       ))}
                     </select>
                   </label>
-                  <label className="checkbox-label">
-                    <input
-                      type="checkbox"
-                      checked={showDone}
-                      onChange={(e) => setShowDone(e.target.checked)}
-                    />
-                    Kész feladatok is
-                  </label>
+                  {currentView !== "list" && (
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={visibleCompleted || statusFilter === "done"}
+                        onChange={(e) => changeCompleted(e.target.checked)}
+                      />
+                      Kész feladatok is
+                    </label>
+                  )}
                   <button
                     className="text-btn"
                     onClick={() => {
                       setMemberFilter("");
                       setPriorityFilter("");
                       setStatusFilter("");
-                      setShowDone(true);
+                      if (currentView !== "list") setShowDone(true);
                     }}
                   >
                     Alaphelyzet
@@ -1266,97 +1344,40 @@ export default function App() {
                   ))}
                 </div>
               ) : currentView === "list" ? (
-                <div className="task-table">
-                  <div className="table-header">
-                    <span>Feladat</span>
-                    <span>Projekt</span>
-                    <span>Határidő</span>
-                    <span>Prioritás</span>
-                    <span>Felelős</span>
-                  </div>
-                  {filtered.length ? (
-                    filtered.map((t) => (
-                      <div
-                        className={
-                          "table-row " + (t.status === "done" ? "done-row" : "")
-                        }
-                        key={t.id}
-                      >
-                        <div>
-                          <StatusMark
-                            value={t.status}
-                            onClick={() =>
-                              !project?.archived &&
-                              updateStatus(
-                                t,
-                                t.status === "done" ? "todo" : "done",
-                              )
-                            }
-                          />
-                          <button
-                            className="table-title"
-                            onClick={() => setTaskEditor({ id: t.id })}
-                          >
-                            {t.title}
-                            <small>
-                              {statuses.find((s) => s.key === t.status)?.label}
-                            </small>
-                          </button>
-                        </div>
-                        <button
-                          className="table-project"
-                          onClick={() => go("projects", t.project_id)}
-                        >
-                          <i
-                            style={{
-                              background: projectDisplayColor(
-                                data.projects.find((p) => p.id === t.project_id)
-                                  ?.color,
-                              ),
-                            }}
-                          />
-                          {
-                            data.projects.find((p) => p.id === t.project_id)
-                              ?.name
-                          }
-                        </button>
-                        <span
-                          className={
-                            "table-date " + (isOverdue(t) ? "overdue" : "")
-                          }
-                        >
-                          <CalendarDays size={13} />
-                          {dayLabel(t.due_date)}
-                          {t.due_time && <small>{t.due_time}</small>}
-                        </span>
-                        <span className={"priority-text " + t.priority}>
-                          <Flag size={13} />
-                          {priorities[t.priority]}
-                        </span>
-                        <div className="table-assignee">
-                          <Avatar
-                            user={data.members.find(
-                              (u) => u.id === t.assignee_id,
-                            )}
-                            size="small"
-                          />
-                          <span>
-                            {data.members.find((u) => u.id === t.assignee_id)
-                              ?.name || "Nincs felelős"}
-                          </span>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="empty-small">
-                      <Search size={28} />
-                      <h3>Még nincs itt feladat.</h3>
-                      <p>
-                        Változtass a szűrésen, vagy hozz létre egy új feladatot.
-                      </p>
-                    </div>
-                  )}
-                </div>
+                <TaskList
+                  tasks={listTasks}
+                  data={data}
+                  manual={appearance.list_sort === "manual"}
+                  readOnly={!!project?.archived}
+                  onOpen={(task) => setTaskEditor({ id: task.id })}
+                  onToggle={(task) =>
+                    updateStatus(task, task.status === "done" ? "todo" : "done")
+                  }
+                  onProject={(id) => go("projects", id)}
+                  onMove={async (id, target, placement) => {
+                    try {
+                      const order = await api<ListOrder>(
+                        "list-order/",
+                        "PATCH",
+                        {
+                          task_id: id,
+                          target_id: target,
+                          placement,
+                          version: data.list_order.version,
+                        },
+                      );
+                      setData((previous) =>
+                        previous
+                          ? { ...previous, list_order: order }
+                          : previous,
+                      );
+                      await reload();
+                    } catch (error) {
+                      await reload().catch(() => {});
+                      throw error;
+                    }
+                  }}
+                />
               ) : (
                 <CalendarView
                   tasks={filtered}

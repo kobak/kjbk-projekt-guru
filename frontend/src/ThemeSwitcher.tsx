@@ -1,7 +1,14 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, LoaderCircle, Monitor, Moon, Sun } from "lucide-react";
-import { chooseTheme, useAppearance } from "./theme";
-import type { ThemeMode } from "./types";
+import {
+  Check,
+  LoaderCircle,
+  Monitor,
+  Moon,
+  Sun,
+  SlidersHorizontal,
+} from "lucide-react";
+import { chooseAppearance, chooseTheme, useAppearance } from "./theme";
+import type { Appearance, ListSort, ThemeMode } from "./types";
 
 export const themeOptions = [
   { value: "light" as ThemeMode, label: "Világos", Icon: Sun },
@@ -11,8 +18,10 @@ export const themeOptions = [
 
 export default function ThemeSwitcher({
   settings = false,
+  onSettings,
 }: {
   settings?: boolean;
+  onSettings?: () => void;
 }) {
   const appearance = useAppearance();
   const [open, setOpen] = useState(false);
@@ -72,6 +81,83 @@ export default function ThemeSwitcher({
         <div className="theme-choices" role="group" aria-label="Megjelenés">
           {options}
         </div>
+        <div className="form-grid appearance-grid">
+          <label>
+            Betűméret
+            <select
+              value={appearance.font_size}
+              disabled={appearance.saving}
+              onChange={(e) =>
+                chooseAppearance({
+                  font_size: e.target.value as Appearance["font_size"],
+                })
+              }
+            >
+              <option value="normal">Normál</option>
+              <option value="large">Nagy</option>
+            </select>
+          </label>
+          <label>
+            Sűrűség
+            <select
+              value={appearance.density}
+              disabled={appearance.saving}
+              onChange={(e) =>
+                chooseAppearance({
+                  density: e.target.value as Appearance["density"],
+                })
+              }
+            >
+              <option value="compact">Kompakt</option>
+              <option value="spacious">Tágas</option>
+            </select>
+          </label>
+          <label>
+            Alapértelmezett feladatnézet
+            <select
+              value={appearance.default_view}
+              disabled={appearance.saving}
+              onChange={(e) =>
+                chooseAppearance({
+                  default_view: e.target.value as Appearance["default_view"],
+                })
+              }
+            >
+              <option value="list">Lista</option>
+              <option value="board">Kanban (Tábla)</option>
+            </select>
+          </label>
+          <label>
+            Lista rendezése
+            <select
+              value={appearance.list_sort}
+              disabled={appearance.saving}
+              onChange={(e) =>
+                chooseAppearance({ list_sort: e.target.value as ListSort })
+              }
+            >
+              <option value="due">Határidő szerint</option>
+              <option value="priority">Prioritás szerint</option>
+              <option value="created">Legújabb elöl</option>
+              <option value="manual">Saját kézi sorrend</option>
+            </select>
+          </label>
+        </div>
+        <label className="appearance-checkbox">
+          <input
+            type="checkbox"
+            checked={appearance.show_completed}
+            disabled={appearance.saving}
+            onChange={(e) =>
+              chooseAppearance({ show_completed: e.target.checked })
+            }
+          />
+          Kész feladatok is a listában
+        </label>
+        <p className="form-hint">
+          A betűméret és a sűrűség az asztali felületet módosítja. Minden
+          választás automatikusan a fiókodhoz mentődik.
+        </p>
         {appearance.saving && (
           <p className="form-hint" role="status">
             <LoaderCircle size={13} className="spin" />
@@ -111,6 +197,19 @@ export default function ThemeSwitcher({
           aria-label="Megjelenés kiválasztása"
         >
           {options}
+          {onSettings && (
+            <button
+              type="button"
+              className="theme-option"
+              onClick={() => {
+                setOpen(false);
+                onSettings();
+              }}
+            >
+              <SlidersHorizontal size={18} />
+              <span>Betűméret és nézet</span>
+            </button>
+          )}
         </div>
       )}
       {appearance.error && (

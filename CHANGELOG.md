@@ -1,5 +1,13 @@
 # Változásnapló
 
+## 1.1.0 — 2026-10-30
+
+- Fiókonként mentett Lista/Kanban alapnézet, a listában alapból rejtett kész feladatok és megjegyzett láthatóság.
+- Határidő, prioritás, létrehozás és személyes kézi listarendezés. A határidő nélküliek az automatikus határidőrendezés végére kerülnek.
+- Húzás és billentyűs fel/le mozgatás; verzióvédelem és a közös feladatoktól elkülönített sorrendtárolás.
+- Nagyobb asztali betűk, teljesebb szélességkihasználás; Normál/Nagy betűméret és Kompakt/Tágas sűrűség a Megjelenés beállításban. Alapból Lista/Normál/Kompakt.
+- 97 backend- és 5 frontend-rendezési teszt; új `0005_personal_task_views` migráció. A korábbi témaválasztás megmarad.
+
 ## 1.0.1 — 2026-10-30
 
 - Az admin a Beállítások → Csapat fülön, a tag melletti ceruzával javíthatja az e-mail-címet. A belépési cím is frissül, a jelszó, feladatok és beállítások megmaradnak.

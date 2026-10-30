@@ -24,7 +24,17 @@ class AppearancePreference(models.Model):
         DARK = "dark", "Sötét"
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="appearance_preference")
     theme = models.CharField(max_length=10, choices=Theme.choices, default=Theme.SYSTEM)
+    default_view = models.CharField(max_length=10, choices=[("list", "Lista"), ("board", "Kanban")], default="list")
+    show_completed = models.BooleanField(default=False)
+    list_sort = models.CharField(max_length=10, choices=[("due", "Határidő"), ("priority", "Prioritás"), ("created", "Létrehozás"), ("manual", "Kézi sorrend")], default="due")
+    font_size = models.CharField(max_length=10, choices=[("normal", "Normál"), ("large", "Nagy")], default="normal")
+    density = models.CharField(max_length=10, choices=[("compact", "Kompakt"), ("spacious", "Tágas")], default="compact")
     updated_at = models.DateTimeField(auto_now=True)
+
+class PersonalListOrder(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="personal_list_order")
+    task_ids = models.JSONField(default=list)
+    version = models.PositiveIntegerField(default=0)
 
 class Workspace(models.Model):
     name = models.CharField(max_length=100, default="Közös munkatér")

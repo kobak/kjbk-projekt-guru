@@ -4,7 +4,7 @@ Magyar nyelvű, saját szerveren futtatható projektkezelő 3–5 fős csapatokn
 
 **Self-hosted Hungarian project management for small teams**, with shared projects, task boards, calendar integration, notifications and an OAuth-enabled MCP server for AI clients. The interface and documentation are currently in Hungarian.
 
-![A GURU sötét megjelenése, helyi bemutatóadatokkal](docs/images/guru-dark-desktop.png)
+![A GURU sötét listanézete, helyi bemutatóadatokkal](docs/images/guru-list-dark.png)
 
 <details>
 <summary>Világos megjelenés</summary>
@@ -22,6 +22,9 @@ Magyar nyelvű, saját szerveren futtatható projektkezelő 3–5 fős csapatokn
 - Személyes Google Naptár-kapcsolat: a felhasználó a saját naptárába teheti a feladat határidejét. OAuth nélkül előre kitöltött Google-esemény és `.ics` letöltés is elérhető.
 - Alkalmazáson belüli, e-mailes és Web Push értesítések. Öt eseménytípus, személyenként külön e-mail- és push-beállításokkal.
 - Világos, sötét és rendszer szerinti megjelenés, fiókonként mentve.
+- Személyes Lista/Kanban alapnézet, kész feladatok megjegyzett láthatósága és mentett listarendezés. Alapból Lista, rejtett kész feladatok és növekvő határidő, a dátum nélküliek a végén.
+- Saját kézi sorrend húzással vagy a fogantyún fel/le nyilakkal. Más csapattagok sorrendjét és a közös feladatokat nem módosítja.
+- Olvashatóbb asztali felület: Normál/Nagy betűméret és Kompakt/Tágas sűrűség, automatikusan a fiókhoz mentve. Alapból Normál/Kompakt.
 - Távoli MCP-kiszolgáló ChatGPT/Claude és más kompatibilis kliensek számára, OAuth + PKCE hitelesítéssel és visszavonható kapcsolatokkal. Nincs beépített chat és nem kell OpenAI/Anthropic API-kulcs.
 - Verzióellenőrzés a párhuzamos feladatszerkesztés ütközéseinek jelzésére.
 
@@ -76,9 +79,10 @@ Az alkalmazás, az adatbázis és a worker technikai neve a fájlokban továbbra
 .venv/bin/python manage.py makemigrations --check --dry-run
 .venv/bin/python manage.py test core --noinput
 npm --prefix frontend run build
+npm --prefix frontend test
 ```
 
-A backendteszt-csomag 84 ellenőrzést tartalmaz, köztük az adminisztrátori e-mail-javítás jogosultság-, belépési és címzési próbáit. A GitHub Actions a tiszta telepítést, frontend-buildet, SQLite/PostgreSQL/MariaDB teszteket és a Docker-buildet ellenőrzi. A külső Google-, SMTP- és push-küldést a tesztek helyettesítik; tesztfutás közben valódi címzettnek nem küldenek üzenetet.
+A backendteszt-csomag 97 ellenőrzést tartalmaz, köztük az adminisztrátori e-mail-javítás, a személyes nézetbeállítások és az elkülönített kézi sorrend jogosultsági próbáit. Öt frontendteszt vizsgálja a rendezést. A GitHub Actions a tiszta telepítést, frontend-buildet, SQLite/PostgreSQL/MariaDB teszteket és a Docker-buildet ellenőrzi. A külső Google-, SMTP- és push-küldést a tesztek helyettesítik; tesztfutás közben valódi címzettnek nem küldenek üzenetet.
 
 Az asztali és 390 px széles mobilnézet böngészős próbán is átesett. A `theme-init.js` szinkron betöltése miatti Vite-figyelmeztetés szándékos: ez alkalmazza a választott témát az első kirajzolás előtt; a fájl a buildben is szerepel.
 
