@@ -37,6 +37,8 @@ docker compose exec app python manage.py setup_workspace
 
 A webfolyamat induláskor migrál és gyűjti a statikus fájlokat. A worker az egészséges webfolyamatra vár; egy példányban futtasd. Az első admin e-mail-címét, nevét és jelszavát az interaktív `setup_workspace` parancs kéri. A többi felhasználó a **Beállítások → Csapat** részen hívható meg; a meghívó linkjét az admin továbbítja.
 
+Elírt csapattag-cím javításához az admin a **Beállítások → Csapat** fülön a tag melletti ceruzát választja, beírja az új e-mail-címet, majd az **E-mail mentése** gombbal ment. Ez a belépési címet is módosítja; a jelszó és a feladatok megmaradnak. Másik fiókhoz tartozó cím nem adható meg, és a változtatás az adminnaplóba kerül. A régi és új cím még fel nem használt meghívói megszűnnek. A már elküldött levelek nem indulnak újra; az új és a még sorban álló értesítések az aktuális címet használják.
+
 Adatok: `database` és `attachments` nevű Compose-volume. A Compose-projekt neve `kozos`, ezért az ugyanazon Docker-gépen futó második telepítéshez külön projektnevet és alkalmazásportot kell választani. **A `docker compose down -v` törli a volume-okban lévő adatokat.**
 
 ## Reverse proxy és HTTPS

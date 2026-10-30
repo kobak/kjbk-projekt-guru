@@ -1,5 +1,12 @@
 # Változásnapló
 
+## 1.0.1 — 2026-10-30
+
+- Az admin a Beállítások → Csapat fülön, a tag melletti ceruzával javíthatja az e-mail-címet. A belépési cím is frissül, a jelszó, feladatok és beállítások megmaradnak.
+- Duplikált cím és párhuzamos szerkesztés ellenőrzése; a régi/új címhez tartozó fel nem használt meghívók visszavonása, adminnaplózás.
+- A profil mentése és a tag letiltása nem írhatja vissza egy közben javított e-mail korábbi értékét.
+- A sorban álló értesítések küldéskor az aktuális címzettet használják. A már elküldött leveleket a címcsere nem küldi újra.
+
 ## 1.0.0 — 2026-10-29
 
 Az első nyilvános, saját szerveren futtatható kiadás.

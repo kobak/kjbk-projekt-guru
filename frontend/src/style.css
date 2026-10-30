@@ -2580,6 +2580,7 @@ input[type="checkbox"] {
 }
 .member-row > div {
   flex: 1;
+  min-width: 0;
 }
 .member-row strong {
   font-size: 11px;
@@ -2590,6 +2591,26 @@ input[type="checkbox"] {
   display: block;
   color: var(--text-muted);
   margin-top: 2px;
+  overflow-wrap: anywhere;
+}
+.member-email-editor {
+  padding: 16px;
+  margin: 12px 0;
+  background: var(--canvas);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.member-email-editor > label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 11px;
+}
+.member-email-editor .form-hint {
+  margin: 10px 0 16px;
+  line-height: 1.6;
+}
+.member-email-editor .button-row {
+  flex-wrap: wrap;
 }
 .member-row > .text-btn {
   margin-left: auto;

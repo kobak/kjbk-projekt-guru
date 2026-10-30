@@ -13,12 +13,14 @@ import {
   UserPlus,
   X,
   KeyRound,
+  Pencil,
 } from "lucide-react";
 import type { Bootstrap } from "./types";
 import { api } from "./api";
 import { Avatar, Modal } from "./ui";
 import NotificationPreferences from "./NotificationPreferences";
 import ThemeSwitcher from "./ThemeSwitcher";
+import MemberEmailEditor from "./MemberEmailEditor";
 
 export default function Settings({
   data,
@@ -43,6 +45,7 @@ export default function Settings({
     [invites, setInvites] = useState<
       { id: number; email: string; expires_at: string }[]
     >([]);
+  const [editingMember, setEditingMember] = useState<number | null>(null);
   const [name, setName] = useState(data.user.name),
     [password, setPassword] = useState(""),
     [current, setCurrent] = useState(""),
@@ -336,30 +339,58 @@ export default function Settings({
               </p>
             </div>
             {data.members.map((u) => (
-              <div key={u.id} className="member-row">
-                <Avatar user={u} />
-                <div>
-                  <strong>
-                    {u.name}
-                    {u.id === data.user.id ? " (te)" : ""}
-                  </strong>
-                  <span>{u.email}</span>
+              <div key={u.id}>
+                <div className="member-row">
+                  <Avatar user={u} />
+                  <div>
+                    <strong>
+                      {u.name}
+                      {u.id === data.user.id ? " (te)" : ""}
+                    </strong>
+                    <span>{u.email}</span>
+                  </div>
+                  <span className="role-tag">{u.admin ? "Admin" : "Tag"}</span>
+                  {data.user.admin && (
+                    <button
+                      type="button"
+                      className="icon-btn"
+                      aria-label={`${u.name} e-mail-címének módosítása`}
+                      title="E-mail-cím módosítása"
+                      aria-expanded={editingMember === u.id}
+                      onClick={() =>
+                        setEditingMember(editingMember === u.id ? null : u.id)
+                      }
+                    >
+                      <Pencil size={16} />
+                    </button>
+                  )}
+                  {data.user.admin && !u.admin && u.id !== data.user.id && (
+                    <button
+                      className="icon-btn"
+                      aria-label={`${u.name} hozzáférésének megszüntetése`}
+                      onClick={() => {
+                        if (confirm(`Megszünteted ${u.name} hozzáférését?`))
+                          run(
+                            () => api(`members/${u.id}/deactivate/`, "POST"),
+                            "Hozzáférés megszüntetve",
+                          );
+                      }}
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
                 </div>
-                <span className="role-tag">{u.admin ? "Admin" : "Tag"}</span>
-                {data.user.admin && !u.admin && u.id !== data.user.id && (
-                  <button
-                    className="icon-btn"
-                    aria-label={`${u.name} hozzáférésének megszüntetése`}
-                    onClick={() => {
-                      if (confirm(`Megszünteted ${u.name} hozzáférését?`))
-                        run(
-                          () => api(`members/${u.id}/deactivate/`, "POST"),
-                          "Hozzáférés megszüntetve",
-                        );
+                {data.user.admin && editingMember === u.id && (
+                  <MemberEmailEditor
+                    member={u}
+                    onCancel={() => setEditingMember(null)}
+                    onSaved={async () => {
+                      await reload();
+                      await refreshInvites();
+                      setEditingMember(null);
+                      toast("E-mail-cím és belépési cím módosítva");
                     }}
-                  >
-                    <X size={16} />
-                  </button>
+                  />
                 )}
               </div>
             ))}

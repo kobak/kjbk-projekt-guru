@@ -30,6 +30,7 @@ urlpatterns = [
     path("api/notifications/read/", views.read_notifications), path("api/push/", views.push_subscription),
     path("api/notification-preferences/", views.notification_preferences),
     path("api/invites/", views.invites), path("api/invites/<str:token>/", views.accept_invite),
+    path("api/members/<int:user_id>/", views.member_email),
     path("api/members/<int:user_id>/deactivate/", views.deactivate_member),
     path("api/google/connect/", views.google_start), path("api/google/callback/", views.google_callback),
     path("api/google/disconnect/", views.google_disconnect), path("api/tasks/<uuid:task_id>/calendar/", views.task_calendar),

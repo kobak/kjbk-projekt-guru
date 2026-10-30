@@ -24,6 +24,7 @@ from .services import Problem, person, project_json, task_json, task_queryset, t
 from .calendar import SCOPE, cipher, sync_link, calendar_file
 from .notifications import preference_json, save_preferences, email_configured
 from .appearance import appearance_json, save_appearance
+from .members import change_member_email
 
 def locked_out(request, credentials=None, *args, **kwargs):
     return JsonResponse({"error": "Túl sok sikertelen belépés. Próbáld újra 30 perc múlva."}, status=429)
@@ -85,15 +86,18 @@ def logout(request):
 @api(("PATCH",))
 def profile(request):
     user = request.user
+    changed_fields = []
     if "name" in request.data:
         user.first_name = text(request.data, "name", 100, True)
+        changed_fields.append("first_name")
     if request.data.get("password"):
         if not user.check_password(request.data.get("current_password", "")):
             raise Problem("A jelenlegi jelszó nem megfelelő.")
         password = password_text(request.data)
         validate_password(password, user)
         user.set_password(password)
-    user.save()
+        changed_fields.append("password")
+    user.save(update_fields=changed_fields)
     update_session_auth_hash(request, user)
     return {"user": person(user)}
 
@@ -273,6 +277,10 @@ def accept_invite(request, token):
     auth_login(request, user, backend="django.contrib.auth.backends.ModelBackend")
     return {"user": person(user), "csrf": get_token(request)}
 
+@api(("PATCH",), admin=True)
+def member_email(request, user_id):
+    return change_member_email(request.user, user_id, request.data)
+
 @api(("POST",), admin=True)
 def deactivate_member(request, user_id):
     if user_id == request.user.id:
@@ -281,7 +289,7 @@ def deactivate_member(request, user_id):
     if u.is_staff:
         raise Problem("Másik adminisztrátort csak a szerver adminfelületén lehet kikapcsolni.")
     u.is_active = False
-    u.save()
+    u.save(update_fields=["is_active"])
     PushSubscription.objects.filter(user=u).delete()
     GoogleConnection.objects.filter(user=u).delete()
     from oauth2_provider.models import AccessToken, RefreshToken
