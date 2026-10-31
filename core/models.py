@@ -111,10 +111,27 @@ def attachment_path(instance, filename):
 class Attachment(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="attachments")
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
-    file = models.FileField(upload_to=attachment_path)
+    file = models.FileField(upload_to=attachment_path, blank=True)
+    kind = models.CharField(max_length=10, choices=[("file", "Feltöltött fájl"), ("drive", "Google Drive")], default="file")
+    drive_file_id = models.CharField(max_length=200, null=True, blank=True)
+    drive_file_hash = models.CharField(max_length=64, null=True, blank=True, editable=False)
+    external_url = models.URLField(max_length=2000, blank=True)
     name = models.CharField(max_length=255)
     size = models.PositiveIntegerField()
     created_at = models.DateTimeField(auto_now_add=True)
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["task", "drive_file_hash"], name="one_drive_file_per_task"),
+            models.CheckConstraint(condition=(
+                models.Q(kind="file", drive_file_id__isnull=True, drive_file_hash__isnull=True, external_url="") & ~models.Q(file="")
+                | models.Q(kind="drive", file="", drive_file_id__isnull=False, drive_file_hash__isnull=False) & ~models.Q(drive_file_id="") & ~models.Q(external_url="")
+            ), name="attachment_file_or_drive"),
+        ]
+    def save(self, *args, **kwargs):
+        self.drive_file_hash = hashlib.sha256(self.drive_file_id.encode()).hexdigest() if self.drive_file_id else None
+        if kwargs.get("update_fields"):
+            kwargs["update_fields"] = set(kwargs["update_fields"]) | {"drive_file_hash"}
+        super().save(*args, **kwargs)
 
 class Notification(models.Model):
     class Kind(models.TextChoices):

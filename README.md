@@ -20,6 +20,8 @@ Magyar nyelvű, saját szerveren futtatható projektkezelő 3–5 fős csapatokn
 - Projektáttekintő, Kanban, lista, havi csapatnaptár és mobilos napi lista.
 - Feladatok felelőssel, prioritással, címkékkel, dátumos vagy pontos határidővel; részfeladatok, hozzászólások és legfeljebb 25 MB-os csatolmányok.
 - Mindig hétfővel kezdődő magyar dátumválasztó. A feladat részletei alatt közvetlenül látható hozzászólások, csapattagválasztós @említésekkel.
+- Készre jelölés után 5 másodperces Visszavonás, amely az előző állapotot állítja vissza és védi a közben történt módosításokat.
+- Google Drive-fájlválasztó: mindenki a saját Google-fiókjából csatolhat fájlhivatkozást, külön feltöltés nélkül. A hozzáférést továbbra is a Drive szabályozza; a GURU-ba csak a név és a hivatkozás kerül.
 - Személyes Google Naptár-kapcsolat: a felhasználó a saját naptárába teheti a feladat határidejét. OAuth nélkül előre kitöltött Google-esemény és `.ics` letöltés is elérhető.
 - Alkalmazáson belüli, e-mailes és Web Push értesítések. Hat eseménytípus, személyenként külön e-mail- és push-beállításokkal, az @említéseket is beleértve.
 - Világos, sötét és rendszer szerinti megjelenés, fiókonként mentve.

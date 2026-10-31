@@ -178,8 +178,9 @@ class AppTests(TestCase):
         self.assertTrue(sync_link(link.id));link.refresh_from_db();self.assertEqual(link.event_id,"")
     @patch("core.worker.sync_link")
     def test_worker_deduplicates_reminders_and_skips_done(self,sync):
-        self.task.due_date=timezone.localdate()+timedelta(days=1);self.task.due_time=time(0);self.task.save()
-        with patch("core.worker.timezone.now",return_value=timezone.now().replace(hour=12)):
+        now=timezone.localtime(timezone.now()).replace(hour=12,minute=0,second=0,microsecond=0)
+        self.task.due_date=now.date()+timedelta(days=1);self.task.due_time=time(0);self.task.save()
+        with patch("core.worker.timezone.now",return_value=now):
             tick();tick()
         self.assertEqual(Notification.objects.filter(dedupe_key__startswith="due:").count(),1)
         self.task.status="done";self.task.save();Notification.objects.filter(dedupe_key__startswith="due:").delete();tick()
