@@ -34,6 +34,7 @@ import {
   RefreshCw,
   Archive,
   Pencil,
+  Undo2,
 } from "lucide-react";
 import { api, ApiError, today, dayLabel, relative, isOverdue } from "./api";
 import type {
@@ -62,6 +63,14 @@ import {
 
 type Page = "overview" | "projects" | "mine" | "calendar";
 type View = "board" | "list" | "calendar";
+type ToastAction = { label: string; perform: () => Promise<string> };
+type ToastMessage = {
+  id: number;
+  message: string;
+  expiresAt: number;
+  action?: ToastAction;
+  busy?: boolean;
+};
 
 function Login({ onLogin }: { onLogin: () => void }) {
   const token = new URLSearchParams(location.search).get("invite");
@@ -243,16 +252,55 @@ export default function App() {
       : "connections",
   );
   const [noticesOpen, setNoticesOpen] = useState(false),
-    [toast, setToast] = useState(""),
+    [toast, setToast] = useState<ToastMessage | null>(null),
     [refreshing, setRefreshing] = useState(false),
     [focusOwn, setFocusOwn] = useState(true);
   const searchRef = useRef<HTMLInputElement>(null),
-    toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const showToast = useCallback((s: string) => {
-    setToast(s);
+    toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined),
+    toastSequence = useRef(0),
+    toastRef = useRef<ToastMessage | null>(null),
+    statusBusy = useRef(new Set<string>());
+  const dismissToast = useCallback((id?: number) => {
+    if (id !== undefined && toastRef.current?.id !== id) return;
     clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToast(""), 4000);
+    toastRef.current = null;
+    setToast(null);
   }, []);
+  const showToast = useCallback(
+    (message: string, action?: ToastAction) => {
+      const next = {
+        id: ++toastSequence.current,
+        message,
+        action,
+        expiresAt: Date.now() + 5000,
+      };
+      toastRef.current = next;
+      setToast(next);
+      clearTimeout(toastTimer.current);
+      toastTimer.current = setTimeout(() => dismissToast(next.id), 5000);
+    },
+    [dismissToast],
+  );
+  useEffect(() => () => clearTimeout(toastTimer.current), []);
+  useEffect(() => dismissToast(), [session?.id, dismissToast]);
+  const runToastAction = async () => {
+    const current = toastRef.current;
+    if (!current?.action || current.busy) return;
+    if (Date.now() >= current.expiresAt) {
+      dismissToast(current.id);
+      return;
+    }
+    clearTimeout(toastTimer.current);
+    toastRef.current = { ...current, busy: true };
+    setToast(toastRef.current);
+    try {
+      const message = await current.action.perform();
+      if (toastRef.current?.id === current.id) showToast(message);
+    } catch (error) {
+      if (toastRef.current?.id === current.id)
+        showToast((error as Error).message);
+    }
+  };
   const reload = useCallback(async () => {
     try {
       const next = await api<Bootstrap>("bootstrap/");
@@ -351,18 +399,59 @@ export default function App() {
     setView(null);
     window.scrollTo({ top: 0 });
   };
+  const applySavedTask = (saved: Task) =>
+    setData(
+      (current) =>
+        current && {
+          ...current,
+          tasks: current.tasks.map((task) =>
+            task.id === saved.id && task.version <= saved.version
+              ? saved
+              : task,
+          ),
+        },
+    );
+  const completedToast = (saved: Task, previous: Status) => {
+    showToast("Még egy lépéssel előrébb. Kész!", {
+      label: "Visszavonás",
+      perform: async () => {
+        statusBusy.current.add(saved.id);
+        try {
+          const { task } = await api<{ task: Task }>(
+            `tasks/${saved.id}/`,
+            "PATCH",
+            { status: previous, version: saved.version },
+          );
+          applySavedTask(task);
+          reload().catch(() => {});
+          return "Készre jelölés visszavonva";
+        } catch (error) {
+          reload().catch(() => {});
+          throw error;
+        } finally {
+          statusBusy.current.delete(saved.id);
+        }
+      },
+    });
+  };
   const updateStatus = async (t: Task, status: Status) => {
+    if (statusBusy.current.has(t.id)) return;
+    statusBusy.current.add(t.id);
     try {
-      await api(`tasks/${t.id}/`, "PATCH", { status, version: t.version });
-      await reload();
-      showToast(
-        status === "done"
-          ? "Még egy lépéssel előrébb. Kész!"
-          : "Állapot frissítve",
-      );
+      const { task } = await api<{ task: Task }>(`tasks/${t.id}/`, "PATCH", {
+        status,
+        version: t.version,
+      });
+      applySavedTask(task);
+      if (status === "done" && t.status !== "done")
+        completedToast(task, t.status);
+      else showToast("Állapot frissítve");
+      reload().catch(() => {});
     } catch (e) {
       showToast((e as Error).message);
-      await reload();
+      reload().catch(() => {});
+    } finally {
+      statusBusy.current.delete(t.id);
     }
   };
   const project = data?.projects.find((p) => p.id === projectId);
@@ -1529,6 +1618,7 @@ export default function App() {
           onClose={() => setTaskEditor(null)}
           onSaved={reload}
           toast={showToast}
+          onCompleted={completedToast}
         />
       )}
       {projectEditor && (
@@ -1577,10 +1667,27 @@ export default function App() {
         />
       )}
       {toast && (
-        <div className="toast" role="status">
+        <div className="toast" role="status" key={toast.id}>
           <Check size={16} />
-          {toast}
-          <button aria-label="Bezárás" onClick={() => setToast("")}>
+          <span>{toast.message}</span>
+          {toast.action && (
+            <button
+              className="toast-undo"
+              disabled={toast.busy}
+              onClick={runToastAction}
+            >
+              {toast.busy ? (
+                <LoaderCircle size={15} className="spin" />
+              ) : (
+                <Undo2 size={15} />
+              )}
+              {toast.busy ? "Visszaállítás…" : toast.action.label}
+            </button>
+          )}
+          <button
+            aria-label="Visszajelzés bezárása"
+            onClick={() => dismissToast(toast.id)}
+          >
             <X size={14} />
           </button>
         </div>

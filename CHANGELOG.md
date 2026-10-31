@@ -1,5 +1,12 @@
 # Változásnapló
 
+## 1.3.0 — 2026-11-01
+
+- A készre jelölés után 5 másodpercig elérhető Visszavonás gomb visszaállítja az előző állapotot. Lista, Kanban, áttekintő és feladatablak esetén is működik; közben módosított feladatot nem ír felül.
+- Beépített Google Drive-fájlválasztó a Fájlok fülön, felhasználónként saját Google-belépéssel. A dokumentum a Drive-on marad, a GURU a nevét és hivatkozását tárolja.
+- A Drive-hozzáférések változatlanok; hivatkozás eltávolítása nem törli a Google-fájlt. Azonos fájl egy feladaton egyszer jelenik meg, a feltöltött csatolmányok megmaradnak.
+- `0007_drive_attachments` migráció; 128 backend- és 11 frontendteszt. Egy korábbi határidőteszt éjfél körüli időzónafüggése megszűnt.
+
 ## 1.2.0 — 2026-10-31
 
 - Magyar, mindig hétfővel kezdődő dátumválasztó a feladatokon, billentyűzetes kezeléssel és mobilnézettel.

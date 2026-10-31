@@ -64,18 +64,23 @@ export function Modal({
   children,
   onClose,
   wide = false,
+  externalDialogOpen = false,
 }: {
   title: string;
   children: ReactNode;
   onClose: () => void;
   wide?: boolean;
+  externalDialogOpen?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null),
-    closeRef = useRef(onClose);
+    closeRef = useRef(onClose),
+    externalRef = useRef(externalDialogOpen);
   closeRef.current = onClose;
+  externalRef.current = externalDialogOpen;
   useEffect(() => {
     const before = document.activeElement as HTMLElement;
     const listener = (e: KeyboardEvent) => {
+      if (externalRef.current) return;
       if (e.key === "Escape") {
         e.stopPropagation();
         closeRef.current();
@@ -110,7 +115,7 @@ export function Modal({
     <div
       className="modal-backdrop"
       onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
+        if (!externalDialogOpen && e.target === e.currentTarget) onClose();
       }}
     >
       <div
@@ -118,12 +123,17 @@ export function Modal({
         ref={ref}
         tabIndex={-1}
         role="dialog"
-        aria-modal="true"
+        aria-modal={externalDialogOpen ? undefined : true}
         aria-label={title}
       >
         <div className="modal-heading">
           <h2>{title}</h2>
-          <button className="icon-btn" onClick={onClose} aria-label="Bezárás">
+          <button
+            className="icon-btn"
+            onClick={onClose}
+            disabled={externalDialogOpen}
+            aria-label="Bezárás"
+          >
             <X size={20} />
           </button>
         </div>

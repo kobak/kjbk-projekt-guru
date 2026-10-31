@@ -59,7 +59,14 @@ export type Task = {
     created_at: string;
     mentions: { user_id: number; start: number; end: number }[];
   }[];
-  attachments?: { id: number; name: string; size: number; url: string }[];
+  attachments?: {
+    id: number;
+    name: string;
+    size: number;
+    url: string;
+    kind: "file" | "drive";
+    can_delete: boolean;
+  }[];
 };
 export type Notice = {
   id: number;

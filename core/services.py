@@ -35,7 +35,9 @@ def task_json(t, user, detail=False):
             data["calendar_manual_url"] = template_url(t)
             data["calendar_ics_url"] = f"/api/tasks/{t.id}/calendar.ics"
         data["comments"] = [{"id": c.id, "user": person(c.user), "body": c.body, "mentions": c.mentions, "created_at": c.created_at.isoformat()} for c in t.comments.select_related("user")]
-        data["attachments"] = [{"id": a.id, "name": a.name, "size": a.size, "url": f"/api/attachments/{a.id}/download/"} for a in t.attachments.all()]
+        data["attachments"] = [{"id": a.id, "name": a.name, "size": a.size, "kind": a.kind,
+            "url": a.external_url if a.kind == "drive" else f"/api/attachments/{a.id}/download/",
+            "can_delete": not t.project.archived and (a.user_id == user.id or user.is_staff)} for a in t.attachments.all()]
     return data
 
 def task_queryset():

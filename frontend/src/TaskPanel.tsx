@@ -10,6 +10,7 @@ import {
   Check,
   LoaderCircle,
   Circle,
+  HardDrive,
 } from "lucide-react";
 import type { Bootstrap, Task, Status } from "./types";
 import { api, ApiError, dayLabel, relative } from "./api";
@@ -17,6 +18,7 @@ import { Avatar, Modal, statuses, priorities } from "./ui";
 import DatePicker from "./DatePicker";
 import CommentComposer from "./CommentComposer";
 import type { Mention } from "./mentions";
+import DriveAttachment from "./DriveAttachment";
 
 type Props = {
   id: string | null;
@@ -26,6 +28,7 @@ type Props = {
   onClose: () => void;
   onSaved: () => Promise<void>;
   toast: (s: string) => void;
+  onCompleted: (task: Task, previous: Status) => void;
 };
 export default function TaskPanel({
   id,
@@ -35,6 +38,7 @@ export default function TaskPanel({
   onClose,
   onSaved,
   toast,
+  onCompleted,
 }: Props) {
   const [task, setTask] = useState<Task | null>(null),
     [loading, setLoading] = useState(!!id),
@@ -57,6 +61,7 @@ export default function TaskPanel({
     [tab, setTab] = useState("details"),
     [editVersion, setEditVersion] = useState(0),
     [conflict, setConflict] = useState(false);
+  const [externalDialogOpen, setExternalDialogOpen] = useState(false);
   const applyFields = (t: Task) => {
     setTitle(t.title);
     setDescription(t.description);
@@ -91,14 +96,18 @@ export default function TaskPanel({
       alive = false;
     };
   }, [id]);
-  const mutate = async (fn: () => Promise<unknown>, message?: string) => {
+  const mutate = async <T,>(
+    fn: () => Promise<T>,
+    message?: string | ((result: T) => string),
+  ) => {
     setError("");
     setBusy(true);
     try {
-      await fn();
+      const result = await fn();
       await load();
       await onSaved();
-      if (message) toast(message);
+      if (message)
+        toast(typeof message === "string" ? message : message(result));
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -110,23 +119,29 @@ export default function TaskPanel({
     setBusy(true);
     setError("");
     try {
-      await api(id ? `tasks/${id}/` : "tasks/", id ? "PATCH" : "POST", {
-        title,
-        description,
-        project_id: project,
-        status,
-        priority,
-        assignee_id: assignee ? Number(assignee) : null,
-        due_date: dueDate || null,
-        due_time: dueDate && dueTime ? dueTime : null,
-        labels: labels
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean),
-        ...(task ? { version: editVersion } : {}),
-      });
+      const { task: saved } = await api<{ task: Task }>(
+        id ? `tasks/${id}/` : "tasks/",
+        id ? "PATCH" : "POST",
+        {
+          title,
+          description,
+          project_id: project,
+          status,
+          priority,
+          assignee_id: assignee ? Number(assignee) : null,
+          due_date: dueDate || null,
+          due_time: dueDate && dueTime ? dueTime : null,
+          labels: labels
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean),
+          ...(task ? { version: editVersion } : {}),
+        },
+      );
       await onSaved();
-      toast(id ? "Változtatások elmentve" : "A feladat elkészült");
+      if (saved.status === "done" && task?.status !== "done")
+        onCompleted(saved, task?.status || "todo");
+      else toast(id ? "Változtatások elmentve" : "A feladat elkészült");
       if (id && comment.trim()) {
         const current = await load();
         if (current) applyFields(current);
@@ -164,6 +179,7 @@ export default function TaskPanel({
       title={id ? "Feladat részletei" : "Új feladat"}
       onClose={closeEditor}
       wide
+      externalDialogOpen={externalDialogOpen}
     >
       {loading ? (
         <div className="loading">
@@ -653,6 +669,26 @@ export default function TaskPanel({
           {tab === "files" && (
             <div className="files-section">
               {!archived && (
+                <DriveAttachment
+                  busy={busy}
+                  onExternalDialog={setExternalDialogOpen}
+                  onPick={(selection) =>
+                    mutate(
+                      () =>
+                        api<{ created: boolean }>(
+                          `tasks/${id}/drive-attachments/`,
+                          "POST",
+                          selection,
+                        ),
+                      (result) =>
+                        result.created
+                          ? "Drive-fájl csatolva"
+                          : "Ez a Drive-fájl már csatolva van",
+                    )
+                  }
+                />
+              )}
+              {!archived && (
                 <label className={"upload-box " + (busy ? "disabled" : "")}>
                   <Paperclip size={26} />
                   <strong>Fájl csatolása</strong>
@@ -683,30 +719,54 @@ export default function TaskPanel({
               {task?.attachments?.map((a) => (
                 <div className="attachment-row" key={a.id}>
                   <div className="attachment-icon">
-                    <Paperclip size={20} />
+                    {a.kind === "drive" ? (
+                      <HardDrive size={20} />
+                    ) : (
+                      <Paperclip size={20} />
+                    )}
                   </div>
-                  <a href={a.url}>
+                  <a
+                    href={a.url}
+                    target={a.kind === "drive" ? "_blank" : undefined}
+                    rel={a.kind === "drive" ? "noopener noreferrer" : undefined}
+                  >
                     <strong>{a.name}</strong>
                     <span>
-                      {a.size < 1024 * 1024
-                        ? `${Math.ceil(a.size / 1024)} KB`
-                        : `${(a.size / 1024 / 1024).toFixed(1)} MB`}
+                      {a.kind === "drive"
+                        ? "Google Drive · Megnyitás új lapon"
+                        : a.size < 1024 * 1024
+                          ? `${Math.ceil(a.size / 1024)} KB`
+                          : `${(a.size / 1024 / 1024).toFixed(1)} MB`}
                     </span>
                   </a>
-                  <button
-                    className="icon-btn"
-                    aria-label="Fájl törlése"
-                    disabled={busy}
-                    onClick={() => {
-                      if (confirm("Törlöd ezt a csatolmányt?"))
-                        mutate(
-                          () => api(`attachments/${a.id}/`, "DELETE"),
-                          "Csatolmány törölve",
-                        );
-                    }}
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                  {a.can_delete && (
+                    <button
+                      className="icon-btn"
+                      aria-label={
+                        a.kind === "drive"
+                          ? "Drive-hivatkozás eltávolítása"
+                          : "Fájl törlése"
+                      }
+                      disabled={busy}
+                      onClick={() => {
+                        if (
+                          confirm(
+                            a.kind === "drive"
+                              ? "Eltávolítod a hivatkozást a feladatról? A Drive-on lévő fájl megmarad."
+                              : "Törlöd ezt a csatolmányt?",
+                          )
+                        )
+                          mutate(
+                            () => api(`attachments/${a.id}/`, "DELETE"),
+                            a.kind === "drive"
+                              ? "Drive-hivatkozás eltávolítva"
+                              : "Csatolmány törölve",
+                          );
+                      }}
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
                 </div>
               ))}
               {!task?.attachments?.length && (

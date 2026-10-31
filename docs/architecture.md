@@ -30,6 +30,10 @@ A feladat dátumválasztóját a React felület rajzolja, magyar napnevekkel és
 
 A feladat az elsődleges adat. Az opcionálisan hozzáadott Google-esemény ebből frissül; naptárból visszafelé nincs szerkesztés. Minden felhasználó a saját Google-kapcsolatával dolgozik. A személyes téma és értesítési beállítás csak az adott felhasználó API-ján módosítható.
 
+A készre jelölés Visszavonás gombja 5 másodpercig él, és a mentés válaszában kapott feladatverzióval csak az előző állapotot küldi vissza. Más mezőket nem másol régi pillanatképből; bármilyen köztes feladatmódosítás verzióütközést eredményez. Egy értesítés művelete egyszer indítható, kijelentkezéskor a lehetőség megszűnik.
+
+Az `Attachment` feltöltött fájlt vagy Drive-hivatkozást jelöl. A forrást adatbázis-kényszer ellenőrzi. A Drive-azonosító SHA-256 lenyomata feladatonként egyedi; ez a kis-/nagybetűre érzéketlen MariaDB-kolláció mellett is helyesen különbözteti meg az azonosítókat. A Google Picker `drive.file` engedélyt kér a felhasználó saját fiókjához. A rövid életű token kizárólag memóriában él, a szerver csak a kiválasztott fájl metaadatait ellenőrzi vele a Drive API-n; fájltartalmat, frissítőtokent vagy teljes Drive-listát nem ment. A név pillanatkép, a megnyitott dokumentum tartalma mindig a Drive-on elérhető változat. A GURU nem módosít Drive-megosztást és nem töröl Google-fájlt. A Naptár külön, titkosított felhasználói frissítőtokent használ.
+
 ## Hozzáférés
 
 A normál API Django-munkamenetet és íráskor CSRF-ellenőrzést használ. A meghívó egyszer használható, időkorlátos, az adatbázisban hashként tárolt token. Az admin meghívhat és letilthat csapattagokat; minden aktív tag hozzáfér a közös projektekhez.

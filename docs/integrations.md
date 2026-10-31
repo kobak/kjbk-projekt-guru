@@ -9,7 +9,7 @@ OAuth nélkül is működik a feladat előre kitöltött **Mentés a Google Napt
 Automatikus szinkronhoz:
 
 1. A [Google Cloud Console](https://console.cloud.google.com/) felületén hozz létre saját projektet, és engedélyezd a Google Calendar API-t.
-2. Állítsd be az OAuth consent screen / Google Auth Platform részt, saját kiscsapatos tesztüzemnél a tagokat tesztfelhasználóként felvéve.
+2. Állítsd be az OAuth consent screen / Google Auth Platform részt. Google Workspace szervezeten belül Internal közönség választható; External tesztüzemnél a tagokat tesztfelhasználóként kell felvenni.
 3. Készíts **Web application** OAuth-klienst, pontos redirect URI-val: `https://projekt.sajatdomain.hu/api/google/callback/`. Helyi teszthez külön `http://localhost:8000/api/google/callback/` kell. A címnek az `APP_URL` értékéből kell következnie, a záró perjellel együtt.
 4. Írd a kliensazonosítót és titkot a `.env` `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` mezőibe. Indítsd újra a webet és workert; Docker esetén `docker compose up -d --force-recreate app worker`.
 5. Minden tag a **Beállítások → Kapcsolatok** részen a **saját Google-fiókját** csatlakoztassa. Ez naptárengedély, nem Google-belépés az alkalmazásba.
@@ -20,6 +20,29 @@ Kért hatókör: `https://www.googleapis.com/auth/calendar.events.owned`. A fris
 A worker 30 másodperces ciklusban dolgozik, Google-hibánál ritkábban próbál újra. A szinkron egyirányú: a feladat módosítja az eseményt. Ha a naptárban kézzel törlöd az eseményt, egy későbbi feladatmódosítás visszateheti; a végleges eltávolítást a GURU gombjával végezd. Leválasztás előtt az alkalmazásból távolítsd el a már hozzáadott eseményeket.
 
 Google tesztmódban a frissítőtokenek korlátozott ideig érvényesek lehetnek. Tartós használathoz a Google Console aktuális publikálási és ellenőrzési feltételei irányadók. Hivatalos leírások: [OAuth webalkalmazásokhoz](https://developers.google.com/identity/protocols/oauth2/web-server), [Calendar események](https://developers.google.com/workspace/calendar/api/v3/reference/events/insert).
+
+## Google Drive-fájlválasztó
+
+A feladat **Fájlok → Kiválasztás a Google Drive-ból** gombja Google-fiókválasztót és fájlválasztót nyit. Mindenki a saját Google-fiókjával dolgozik; a közös Cloud-projekt az alkalmazás azonosítására szolgál. A dokumentumot nem tölti fel a GURU szerverére. A meglévő Drive-megosztás érvényes: a csapattagoknak ott is hozzáféréssel kell rendelkezniük. A GURU-ból eltávolított hivatkozás a Google-fájlt megőrzi.
+
+A Google Cloud-projektben a **Google Drive API** és **Google Picker API** szükséges. Webes OAuth-kliensnél add hozzá a saját GURU-címedet az Authorized JavaScript origins listához, például `https://projekt.sajatdomain.hu`. Ugyanaz a kliens használható a Naptárhoz is, annak külön callback címével. A telepítés védett `.env` fájljába kerül:
+
+```dotenv
+GOOGLE_CLIENT_ID=WEBES_OAUTH_KLIENSAZONOSITO
+GOOGLE_CLIENT_SECRET=NAPTARHOZ_TARTOZO_KLIENSTITOK
+GOOGLE_PICKER_API_KEY=KORLATOZOTT_BONGESZOS_API_KULCS
+GOOGLE_PICKER_APP_ID=CLOUD_PROJEKT_SZAMA
+# Opcionális, ha a Pickerhez külön webes OAuth-kliens kell:
+GOOGLE_PICKER_CLIENT_ID=
+```
+
+Az app ID a Cloud-projekt **száma**, nem a szöveges projektazonosító. A böngészős API-kulcsot korlátozd a Google Picker API-ra, és webes hivatkozásokhoz engedélyezd a saját domaint (`https://projekt.sajatdomain.hu/*`) és a Google által előírt `https://docs.google.com/*` címet. A kliensazonosító és ez a korlátozott API-kulcs megjelenik a bejelentkezett felhasználó böngészőjében; kliens titkos kulcsa vagy frissítőtoken nem kerül oda.
+
+A Picker csak a `https://www.googleapis.com/auth/drive.file` hatókört kéri; a Naptár saját hatóköre külön engedélyezendő. A Drive-token rövid életű, nem kerül helyi tárba vagy az adatbázisba. A szerver kizárólag a kiválasztott fájl nevét és megnyitási hivatkozását ellenőrzi. A fájlválasztó visszalépését vagy bezárását kezeli; a belépéshez felugró Google-ablakot a böngészőben engedélyezni kell. A Google-kapcsolat kiépítése után indítsd újra az alkalmazást. Hiányzó beállítások mellett a GURU jelzi, hogy a Drive-integráció előkészítés alatt van.
+
+Google Workspace szervezeten belüli használatnál Internal közönség választható, ekkor csak a szervezet Google-fiókjai csatlakozhatnak. Külső Gmail-/más domaines fiókokhoz External közönség és a Google aktuális közzétételi/ellenőrzési feltételei szükségesek. Ezek nem azonosak a GURU meghívásos hozzáférésével.
+
+Hivatalos leírások: [Google Picker bekötése](https://developers.google.com/workspace/drive/picker/guides/web-picker), [rövid életű böngészős tokenek](https://developers.google.com/identity/oauth2/web/guides/use-token-model), [Drive fájlmetaadatok](https://developers.google.com/workspace/drive/api/reference/rest/v3/files/get).
 
 ## Értesítések és SMTP
 

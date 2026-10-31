@@ -27,6 +27,7 @@ from .appearance import appearance_json, save_appearance
 from .members import change_member_email
 from .list_order import list_order_json, save_list_order
 from .comments import add_comment
+from .drive import picker_config, link_drive_file
 
 def locked_out(request, credentials=None, *args, **kwargs):
     return JsonResponse({"error": "Túl sok sikertelen belépés. Próbáld újra 30 perc múlva."}, status=429)
@@ -185,15 +186,32 @@ def attachments(request, task_id):
     activity(request.user, t, "fájlt csatolt")
     return {"ok": True}
 
+@api()
+def drive_config(request):
+    response = JsonResponse(picker_config())
+    response["Cache-Control"] = "no-store"
+    return response
+
+@api(("POST",))
+def drive_attachment(request, task_id):
+    return link_drive_file(task_id, request.user, request.data)
+
 @api(("GET", "DELETE"))
 def attachment(request, attachment_id):
     a = get_object_or_404(Attachment, id=attachment_id, task__deleted=False)
     if request.method == "DELETE":
+        if a.task.project.archived:
+            raise Problem("Az archivált projekt fájljai csak olvashatók.")
         if a.user_id != request.user.id and not request.user.is_staff:
-            raise Problem("Csak a feltöltő vagy az adminisztrátor törölheti a fájlt.", 403)
-        a.file.delete(save=False)
+            raise Problem("Csak a csatoló vagy az adminisztrátor távolíthatja el a csatolmányt.", 403)
+        if a.kind == "file":
+            a.file.delete(save=False)
         a.delete()
         return {"ok": True}
+    if a.kind == "drive":
+        response = redirect(a.external_url)
+        response["Referrer-Policy"] = "no-referrer"
+        return response
     response = FileResponse(a.file.open("rb"), as_attachment=True, filename=a.name, content_type="application/octet-stream")
     response["X-Content-Type-Options"] = "nosniff"
     return response
@@ -377,6 +395,8 @@ def spa(request, path=""):
         return HttpResponse("A felület még nincs lefordítva. Futtasd: cd frontend && npm run build", status=503)
     response = HttpResponse(index.read_text(), content_type="text/html")
     response["Cache-Control"] = "no-cache"
+    if picker_config()["enabled"]:
+        response["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups"
     return response
 
 def health(request):

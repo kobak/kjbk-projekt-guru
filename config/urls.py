@@ -26,6 +26,8 @@ urlpatterns = [
     path("api/tasks/<uuid:task_id>/checklist/", views.checklist),
     path("api/tasks/<uuid:task_id>/checklist/<int:item_id>/", views.checklist),
     path("api/tasks/<uuid:task_id>/attachments/", views.attachments),
+    path("api/drive/config/", views.drive_config),
+    path("api/tasks/<uuid:task_id>/drive-attachments/", views.drive_attachment),
     path("api/attachments/<int:attachment_id>/download/", views.attachment),
     path("api/attachments/<int:attachment_id>/", views.attachment),
     path("api/notifications/read/", views.read_notifications), path("api/push/", views.push_subscription),

@@ -205,3 +205,72 @@
     max-width: calc(100vw - 56px);
   }
 }
+.toast > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.toast > .toast-undo {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  margin-left: 4px;
+  padding: 6px 8px;
+  border: 1px solid #ffffff66;
+  border-radius: 5px;
+  color: #fff;
+  font-weight: 600;
+}
+.toast > .toast-undo:hover {
+  background: #ffffff1a;
+}
+.toast > button:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+.drive-attachment {
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--canvas);
+  padding: 16px;
+  margin-bottom: 20px;
+}
+.drive-attachment > div:first-child {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: var(--text-secondary);
+}
+.drive-attachment strong {
+  color: var(--ink);
+  font-size: 14px;
+}
+.drive-attachment p {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  margin: 4px 0 12px;
+}
+.drive-attachment .error-banner {
+  margin: 12px 0 0;
+}
+@media (max-width: 600px) {
+  .picker-dialog {
+    width: calc(100vw - 16px) !important;
+    min-width: 0 !important;
+    max-width: calc(100vw - 16px) !important;
+    left: 8px !important;
+  }
+  .picker-dialog-content,
+  .picker-dialog-content iframe {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  .drive-attachment {
+    padding: 12px;
+  }
+  .drive-attachment .btn {
+    width: 100%;
+    white-space: normal;
+  }
+}
