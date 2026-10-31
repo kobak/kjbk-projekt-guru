@@ -23,15 +23,18 @@ Google tesztmódban a frissítőtokenek korlátozott ideig érvényesek lehetnek
 
 ## Értesítések és SMTP
 
-A csengő alatt az alkalmazáson belüli értesítések mindig elérhetők. A **Beállítások → Értesítések** részen minden tag külön választ e-mailt és push-t öt eseményhez:
+A csengő alatt az alkalmazáson belüli értesítések mindig elérhetők. A **Beállítások → Értesítések** részen minden tag külön választ e-mailt és push-t hat eseményhez:
 
 | Esemény | E-mail alapból | Push alapból |
 | --- | --- | --- |
 | Új feladatot osztottak rá | Igen | Igen |
 | Más módosította a feladatát | Nem | Igen |
 | Hozzászólás az érintett feladathoz | Nem | Igen |
+| Megemlítették egy hozzászólásban | Igen | Igen |
 | Közelgő határidő | Nem | Igen |
 | Lejárt határidő | Nem | Igen |
+
+Az említéshez írj `@` jelet a hozzászólásba, majd válaszd ki a csapattagot név vagy e-mail alapján. A kiválasztott említések a szerkesztő alatt is látszanak; a pusztán begépelt név önmagában közönséges szöveg. Ha az említés szövegét átírod, válaszd ki újra a tagot. A küldött hozzászólásban az említés kiemelést kap. Az említett tag akkor is értesül, ha korábban nem vett részt a feladatban; a felelős/korábbi hozzászóló sem kap duplán jelzést. Saját említésről nincs külön értesítés. Az `0006_comment_mentions` migráció az új említéstípust mindkét csatornán bekapcsolja a meglévő fiókoknak, a korábbi öt típus választásait megőrzi. Ez később szabadon kikapcsolható.
 
 A push alapértéke nem jelent automatikus böngészőengedélyt: az eszközön külön engedélyezni kell. Az egész napos határidő emlékeztetőjének referenciaideje 09:00, a közelgő jelzés az előző 24 órában válik esedékessé.
 

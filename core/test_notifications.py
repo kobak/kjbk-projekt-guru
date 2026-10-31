@@ -53,7 +53,7 @@ class NotificationTests(TestCase):
         self.assertTrue(data["email_configured"])
         self.assertEqual(set(data["preferences"]), set(NOTIFICATION_EVENTS))
         for key, channels in data["preferences"].items():
-            self.assertEqual(channels, {"email": key == "task_assigned", "push": True})
+            self.assertEqual(channels, {"email": key in ("task_assigned", "mention"), "push": True})
 
     def test_preferences_require_login_and_csrf(self):
         self.assertEqual(Client().get("/api/notification-preferences/").status_code, 401)
@@ -129,18 +129,18 @@ class NotificationTests(TestCase):
         self.assertEqual(len(mail.outbox), 1)
         self.push.assert_not_called()
 
-    def test_all_five_types_can_send_email_when_selected(self):
+    def test_all_types_can_send_email_when_selected(self):
         NotificationPreference.objects.create(user=self.member, email_events=list(NOTIFICATION_EVENTS), push_events=[])
         for key in NOTIFICATION_EVENTS:
             self.emit(key)
         tick(); tick()
-        self.assertEqual(len(mail.outbox), 5)
+        self.assertEqual(len(mail.outbox), len(NOTIFICATION_EVENTS))
 
-    def test_only_assignments_send_email_by_default(self):
+    def test_only_assignments_and_mentions_send_email_by_default(self):
         for key in NOTIFICATION_EVENTS:
             self.emit(key)
         tick()
-        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(len(mail.outbox), 2)
 
     def test_disabling_a_queued_channel_prevents_delivery(self):
         self.subscription()

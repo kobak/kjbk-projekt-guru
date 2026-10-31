@@ -1,5 +1,13 @@
 # Változásnapló
 
+## 1.2.0 — 2026-10-31
+
+- Magyar, mindig hétfővel kezdődő dátumválasztó a feladatokon, billentyűzetes kezeléssel és mobilnézettel.
+- A hozzászólások a Részletek alatt jelennek meg, külön hozzászólásfül nélkül. A megírt, még el nem küldött hozzászólás a feladat mentésekor is megmarad.
+- Név/e-mail szerinti csapattagválasztós @említések, tartós kiemelés és címzettenként egyetlen értesítés. Az azonos nevű tagok külön kiválaszthatók.
+- Külön „Megemlítettek egy hozzászólásban” e-mail/push beállítás, alapból mindkettő bekapcsolva; a korábbi öt típus beállításai megmaradnak.
+- `0006_comment_mentions` migráció; 110 backend- és 11 frontendteszt.
+
 ## 1.1.0 — 2026-10-30
 
 - Fiókonként mentett Lista/Kanban alapnézet, a listában alapból rejtett kész feladatok és megjegyzett láthatóság.

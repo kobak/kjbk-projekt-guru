@@ -24,6 +24,10 @@ Az adatbázis tartalmazza a felhasználókat, jelszóhasheket, munkateret, proje
 
 Az `AppearancePreference` a fiók témáját, asztali betűméretét/sűrűségét és listabeállításait tárolja. A `PersonalListOrder` felhasználónként külön feladatazonosító-sorrendet és verziót őriz; mozgatáskor nem ír a `Task.position` vagy `Task.version` mezőbe, és nem generál közös tevékenységet vagy értesítést. Az API relatív mozgatást fogad, nem a teljes, esetleg szűrt listával írja felül a rejtett sorokat.
 
+A `Comment.mentions` a kiválasztott tag azonosítóját és a megjelenő szöveg UTF-16 kezdő/végpozícióját tárolja. A backend ellenőrzi az aktív tagságot, a név egyezését és a tartományokat; az emoji és a külső szóközök levágása sem tolja el a kiemelést. A komment és a címzettenként egyetlen értesítés közös tranzakcióban jön létre. Az említés értesítéstípusa elsőbbséget kap a hagyományos hozzászólásjelzéssel szemben, de minden csatornán a címzett személyes beállítása érvényes. A régi kommentek üres említéslistával változatlanul megmaradnak.
+
+A feladat dátumválasztóját a React felület rajzolja, magyar napnevekkel és hétfői hétkezdéssel, a böngésző területi beállításától függetlenül. Nyilakkal, Home/End, Page Up/Down és Shift+Page Up/Down billentyűkkel kezelhető; Escape csak a naptárat zárja be. A billentyűs működéshez a [WAI dátumválasztó mintája](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/examples/datepicker-dialog/) szolgált referenciaként.
+
 A feladat az elsődleges adat. Az opcionálisan hozzáadott Google-esemény ebből frissül; naptárból visszafelé nincs szerkesztés. Minden felhasználó a saját Google-kapcsolatával dolgozik. A személyes téma és értesítési beállítás csak az adott felhasználó API-ján módosítható.
 
 ## Hozzáférés
