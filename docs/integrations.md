@@ -38,6 +38,8 @@ GOOGLE_PICKER_CLIENT_ID=
 
 Az app ID a Cloud-projekt **száma**, nem a szöveges projektazonosító. A böngészős API-kulcsot korlátozd a Google Picker API-ra, és webes hivatkozásokhoz engedélyezd a saját domaint (`https://projekt.sajatdomain.hu/*`) és a Google által előírt `https://docs.google.com/*` címet. A kliensazonosító és ez a korlátozott API-kulcs megjelenik a bejelentkezett felhasználó böngészőjében; kliens titkos kulcsa vagy frissítőtoken nem kerül oda.
 
+Beállított Picker mellett a felület `Referrer-Policy: strict-origin-when-cross-origin` fejlécet ad: a Google így ellenőrizheti az engedélyezett webcímet, miközben feladatazonosítót vagy URL-paramétert nem kap. Fordított proxy esetén ezt ne írd felül `same-origin` vagy `no-referrer` értékkel, mert a Google ilyenkor érvénytelen fejlesztői kulcsot jelezhet. Az API-végpontok továbbra is `same-origin` beállítással működnek.
+
 A Picker csak a `https://www.googleapis.com/auth/drive.file` hatókört kéri; a Naptár saját hatóköre külön engedélyezendő. A Drive-token rövid életű, nem kerül helyi tárba vagy az adatbázisba. A szerver kizárólag a kiválasztott fájl nevét és megnyitási hivatkozását ellenőrzi. A fájlválasztó visszalépését vagy bezárását kezeli; a belépéshez felugró Google-ablakot a böngészőben engedélyezni kell. A Google-kapcsolat kiépítése után indítsd újra az alkalmazást. Hiányzó beállítások mellett a GURU jelzi, hogy a Drive-integráció előkészítés alatt van.
 
 Google Workspace szervezeten belüli használatnál Internal közönség választható, ekkor csak a szervezet Google-fiókjai csatlakozhatnak. Külső Gmail-/más domaines fiókokhoz External közönség és a Google aktuális közzétételi/ellenőrzési feltételei szükségesek. Ezek nem azonosak a GURU meghívásos hozzáférésével.

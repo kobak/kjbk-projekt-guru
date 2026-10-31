@@ -85,7 +85,7 @@ npm --prefix frontend run build
 npm --prefix frontend test
 ```
 
-A backendteszt-csomag 97 ellenőrzést tartalmaz, köztük az adminisztrátori e-mail-javítás, a személyes nézetbeállítások és az elkülönített kézi sorrend jogosultsági próbáit. Öt frontendteszt vizsgálja a rendezést. A GitHub Actions a tiszta telepítést, frontend-buildet, SQLite/PostgreSQL/MariaDB teszteket és a Docker-buildet ellenőrzi. A külső Google-, SMTP- és push-küldést a tesztek helyettesítik; tesztfutás közben valódi címzettnek nem küldenek üzenetet.
+A backendteszt-csomag 128 ellenőrzést tartalmaz, köztük az adminisztrátori e-mail-javítás, a személyes nézetbeállítások, a kézi sorrend, a készre jelölés visszavonása és a Drive-csatolás jogosultsági próbáit. Tizenegy frontendteszt vizsgálja a rendezést és az említéseket. A GitHub Actions a tiszta telepítést, frontend-buildet, SQLite/PostgreSQL/MariaDB teszteket és a Docker-buildet ellenőrzi. A külső Google-, SMTP- és push-küldést a tesztek helyettesítik; tesztfutás közben valódi címzettnek nem küldenek üzenetet.
 
 Az asztali és 390 px széles mobilnézet böngészős próbán is átesett. A `theme-init.js` szinkron betöltése miatti Vite-figyelmeztetés szándékos: ez alkalmazza a választott témát az első kirajzolás előtt; a fájl a buildben is szerepel.
 
