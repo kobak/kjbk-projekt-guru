@@ -3,10 +3,10 @@ import hashlib
 from django.conf import settings
 from django.db import models
 
-NOTIFICATION_EVENTS = ("task_assigned", "task_updated", "comment", "due", "overdue")
+NOTIFICATION_EVENTS = ("task_assigned", "task_updated", "comment", "mention", "due", "overdue")
 
 def default_email_events():
-    return ["task_assigned"]
+    return ["task_assigned", "mention"]
 
 def default_push_events():
     return list(NOTIFICATION_EVENTS)
@@ -100,6 +100,7 @@ class Comment(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="comments")
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
     body = models.TextField()
+    mentions = models.JSONField(default=list, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     class Meta:
         ordering = ["created_at"]
@@ -121,6 +122,7 @@ class Notification(models.Model):
         TASK_ASSIGNED = "task_assigned", "Új feladat kiosztása"
         TASK_UPDATED = "task_updated", "Feladatom módosítása"
         COMMENT = "comment", "Hozzászólás"
+        MENTION = "mention", "Megemlítés hozzászólásban"
         DUE = "due", "Közelgő határidő"
         OVERDUE = "overdue", "Lejárt határidő"
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)

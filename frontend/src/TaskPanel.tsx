@@ -4,7 +4,6 @@ import {
   CalendarCheck,
   ExternalLink,
   Paperclip,
-  Send,
   Trash2,
   Plus,
   X,
@@ -15,6 +14,9 @@ import {
 import type { Bootstrap, Task, Status } from "./types";
 import { api, ApiError, dayLabel, relative } from "./api";
 import { Avatar, Modal, statuses, priorities } from "./ui";
+import DatePicker from "./DatePicker";
+import CommentComposer from "./CommentComposer";
+import type { Mention } from "./mentions";
 
 type Props = {
   id: string | null;
@@ -50,6 +52,7 @@ export default function TaskPanel({
     [dueTime, setDueTime] = useState(""),
     [labels, setLabels] = useState("");
   const [comment, setComment] = useState(""),
+    [mentions, setMentions] = useState<Mention[]>([]),
     [check, setCheck] = useState(""),
     [tab, setTab] = useState("details"),
     [editVersion, setEditVersion] = useState(0),
@@ -124,7 +127,10 @@ export default function TaskPanel({
       });
       await onSaved();
       toast(id ? "Változtatások elmentve" : "A feladat elkészült");
-      onClose();
+      if (id && comment.trim()) {
+        const current = await load();
+        if (current) applyFields(current);
+      } else onClose();
     } catch (e) {
       setError((e as Error).message);
       if (e instanceof ApiError && e.status === 409) setConflict(true);
@@ -146,8 +152,10 @@ export default function TaskPanel({
         labels !== task.labels.join(", ")
       : !!(title || description || labels || dueDate || assignee);
     if (
-      !changed ||
-      confirm("Bezárod mentés nélkül? A mezők módosításai elvesznek.")
+      (!changed && !comment.trim()) ||
+      confirm(
+        "Bezárod mentés nélkül? A módosítások és az el nem küldött hozzászólás elvesznek.",
+      )
     )
       onClose();
   };
@@ -170,14 +178,6 @@ export default function TaskPanel({
               onClick={() => setTab("details")}
             >
               Részletek
-            </button>
-            <button
-              className={tab === "conversation" ? "active" : ""}
-              onClick={() => setTab("conversation")}
-              disabled={!id}
-            >
-              Hozzászólások{" "}
-              {task?.comment_count ? `(${task.comment_count})` : ""}
             </button>
             <button
               className={tab === "files" ? "active" : ""}
@@ -299,15 +299,11 @@ export default function TaskPanel({
                     ))}
                   </select>
                 </label>
-                <label>
-                  Határidő
-                  <input
-                    type="date"
-                    value={dueDate}
-                    onChange={(e) => setDueDate(e.target.value)}
-                    disabled={archived}
-                  />
-                </label>
+                <DatePicker
+                  value={dueDate}
+                  onChange={setDueDate}
+                  disabled={archived}
+                />
                 <label>
                   Időpont <span className="muted">· nem kötelező</span>
                   <input
@@ -598,8 +594,12 @@ export default function TaskPanel({
               </div>
             </form>
           )}
-          {tab === "conversation" && (
-            <div className="conversation">
+          {id && tab === "details" && (
+            <section className="conversation" aria-label="Hozzászólások">
+              <h3>
+                Hozzászólások{" "}
+                {task?.comment_count ? `(${task.comment_count})` : ""}
+              </h3>
               <div className="comment-list">
                 {task?.comments?.length ? (
                   task.comments.map((c) => (
@@ -610,7 +610,9 @@ export default function TaskPanel({
                           <strong>{c.user.name}</strong>
                           <span>{relative(c.created_at)}</span>
                         </div>
-                        <p>{c.body}</p>
+                        <p>
+                          {commentParts(c.body, c.mentions || [], data.members)}
+                        </p>
                       </div>
                     </article>
                   ))
@@ -625,36 +627,28 @@ export default function TaskPanel({
                 )}
               </div>
               {!archived && (
-                <form
-                  className="comment-compose"
-                  onSubmit={(e) => {
-                    e.preventDefault();
+                <CommentComposer
+                  body={comment}
+                  mentions={mentions}
+                  members={data.members}
+                  busy={busy}
+                  onChange={(body, selected) => {
+                    setComment(body);
+                    setMentions(selected);
+                  }}
+                  onSubmit={() => {
                     mutate(async () => {
                       await api(`tasks/${id}/comments/`, "POST", {
                         body: comment,
+                        mentions,
                       });
                       setComment("");
+                      setMentions([]);
                     }, "Hozzászólás elküldve");
                   }}
-                >
-                  <textarea
-                    value={comment}
-                    onChange={(e) => setComment(e.target.value)}
-                    placeholder="Írj hozzászólást…"
-                    required
-                    maxLength={10000}
-                    rows={3}
-                  />
-                  <button
-                    className="btn primary"
-                    disabled={busy || !comment.trim()}
-                  >
-                    <Send size={16} />
-                    Küldés
-                  </button>
-                </form>
+                />
               )}
-            </div>
+            </section>
           )}
           {tab === "files" && (
             <div className="files-section">
@@ -724,4 +718,25 @@ export default function TaskPanel({
       )}
     </Modal>
   );
+}
+
+function commentParts(
+  body: string,
+  mentions: Mention[],
+  members: Bootstrap["members"],
+) {
+  const parts: React.ReactNode[] = [];
+  let cursor = 0;
+  for (const mention of mentions) {
+    parts.push(body.slice(cursor, mention.start));
+    const user = members.find((member) => member.id === mention.user_id);
+    parts.push(
+      <mark className="comment-mention" key={mention.start} title={user?.email}>
+        {body.slice(mention.start, mention.end)}
+      </mark>,
+    );
+    cursor = mention.end;
+  }
+  parts.push(body.slice(cursor));
+  return parts;
 }

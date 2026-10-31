@@ -12,6 +12,7 @@ EVENTS = [
     {"key": "task_assigned", "label": "Új feladatot kaptam", "description": "Valaki rám osztott egy feladatot."},
     {"key": "task_updated", "label": "Változott a feladatom", "description": "Más módosította a hozzám rendelt feladatot."},
     {"key": "comment", "label": "Új hozzászólás", "description": "Hozzászóltak egy engem érintő feladathoz."},
+    {"key": "mention", "label": "Megemlítettek egy hozzászólásban", "description": "Valaki @ jellel megemlített egy feladat hozzászólásában."},
     {"key": "due", "label": "Közeleg a határidő", "description": "A feladatom határideje 24 órán belül van."},
     {"key": "overdue", "label": "Lejárt a határidő", "description": "A feladatom határideje lejárt."},
 ]

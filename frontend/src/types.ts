@@ -52,7 +52,13 @@ export type Task = {
   } | null;
   calendar_manual_url?: string;
   calendar_ics_url?: string;
-  comments?: { id: number; user: Member; body: string; created_at: string }[];
+  comments?: {
+    id: number;
+    user: Member;
+    body: string;
+    created_at: string;
+    mentions: { user_id: number; start: number; end: number }[];
+  }[];
   attachments?: { id: number; name: string; size: number; url: string }[];
 };
 export type Notice = {
@@ -73,7 +79,7 @@ export type Integrations = {
   mcp_url: string;
 };
 export type NotificationEvent =
-  "task_assigned" | "task_updated" | "comment" | "due" | "overdue";
+  "task_assigned" | "task_updated" | "comment" | "mention" | "due" | "overdue";
 export type NotificationPreferences = {
   events: { key: NotificationEvent; label: string; description: string }[];
   preferences: Record<NotificationEvent, { email: boolean; push: boolean }>;

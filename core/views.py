@@ -19,13 +19,14 @@ from django.middleware.csrf import get_token
 from django.shortcuts import get_object_or_404, redirect
 from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
-from .models import Workspace, Project, Task, ChecklistItem, Comment, Attachment, Notification, Activity, Invite, PushSubscription, GoogleConnection, CalendarLink
-from .services import Problem, person, project_json, task_json, task_queryset, text, password_text, save_project, save_task, delete_task, notify, activity
+from .models import Workspace, Project, Task, ChecklistItem, Attachment, Notification, Activity, Invite, PushSubscription, GoogleConnection, CalendarLink
+from .services import Problem, person, project_json, task_json, task_queryset, text, password_text, save_project, save_task, delete_task, activity
 from .calendar import SCOPE, cipher, sync_link, calendar_file
 from .notifications import preference_json, save_preferences, email_configured
 from .appearance import appearance_json, save_appearance
 from .members import change_member_email
 from .list_order import list_order_json, save_list_order
+from .comments import add_comment
 
 def locked_out(request, credentials=None, *args, **kwargs):
     return JsonResponse({"error": "Túl sok sikertelen belépés. Próbáld újra 30 perc múlva."}, status=429)
@@ -152,13 +153,7 @@ def task(request, task_id):
 
 @api(("POST",))
 def comments(request, task_id):
-    t = get_object_or_404(Task, id=task_id, deleted=False, project__archived=False)
-    body = text(request.data, "body", 10000, True)
-    Comment.objects.create(task=t, user=request.user, body=body)
-    recipients = {t.created_by_id, t.assignee_id} | set(t.comments.values_list("user_id", flat=True))
-    for uid in recipients - {None, request.user.id}:
-        notify(uid, t, f"{request.user.first_name or request.user.email} hozzászólt", t.title, kind=Notification.Kind.COMMENT)
-    activity(request.user, t, "hozzászólt a feladathoz")
+    add_comment(task_id, request.user, request.data)
     return {"ok": True}
 
 @api(("POST", "PATCH", "DELETE"))

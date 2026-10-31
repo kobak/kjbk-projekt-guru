@@ -1,0 +1,207 @@
+.date-field {
+  position: relative;
+  min-width: 0;
+}
+.date-field > label {
+  display: block;
+  margin-bottom: 7px;
+}
+.date-trigger {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+}
+.date-popover {
+  position: absolute;
+  z-index: 15;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 304px;
+  max-width: calc(100vw - 72px);
+  max-height: calc(100dvh - 140px);
+  overflow-y: auto;
+  padding: 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 10px 32px var(--modal-scrim);
+}
+.date-navigation,
+.date-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+.date-navigation strong {
+  font-size: 14px;
+}
+.date-grid {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  margin: 8px 0;
+}
+.date-grid th {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  height: 28px;
+}
+.date-grid td {
+  padding: 1px;
+  text-align: center;
+}
+.date-grid button {
+  width: 100%;
+  min-height: 34px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 13px;
+}
+.date-grid button.outside {
+  color: var(--text-muted);
+}
+.date-grid button[aria-current="date"] {
+  border-color: var(--accent-foreground);
+}
+.date-grid button:hover {
+  background: var(--brand-tint);
+}
+.date-grid button.selected {
+  background: var(--brand-primary);
+  color: #fff;
+}
+.date-grid button:focus-visible,
+.date-trigger:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+.date-actions {
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+.date-actions .text-btn {
+  font-size: 11px;
+}
+.conversation {
+  border-top: 1px solid var(--line);
+}
+.conversation > h3 {
+  font-size: 16px;
+  margin-bottom: 18px;
+}
+.conversation .comment-list {
+  min-height: 0;
+  max-height: none;
+  overflow: visible;
+}
+.conversation .empty-small {
+  padding: 12px 0 20px;
+}
+.conversation .comment-compose textarea {
+  font-size: var(--panel-text, 14px);
+}
+.mention-editor {
+  position: relative;
+  width: 100%;
+}
+.mention-editor textarea {
+  display: block;
+  width: 100%;
+}
+.mention-choices {
+  margin-top: 6px;
+  width: 100%;
+  max-height: 220px;
+  overflow: auto;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.mention-choices > button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+}
+.mention-choices > button:hover,
+.mention-choices > button[aria-selected="true"] {
+  background: var(--brand-tint);
+}
+.mention-choices > button > span:last-child {
+  min-width: 0;
+}
+.mention-choices strong,
+.mention-choices small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.mention-choices small {
+  color: var(--text-muted);
+}
+.mention-choices > p {
+  padding: 10px 12px;
+  color: var(--text-muted);
+}
+.comment-mention {
+  color: var(--accent-foreground);
+  background: var(--brand-tint);
+  border-radius: 4px;
+  padding: 1px 3px;
+}
+.selected-mentions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  font-size: 12px;
+}
+.selected-mentions > span:first-child {
+  color: var(--text-muted);
+}
+.selected-mentions > span:not(:first-child) {
+  padding: 3px 7px;
+  border-radius: 5px;
+  color: var(--accent-foreground);
+  background: var(--brand-tint);
+}
+.comment-compose-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+.comment-compose-footer > span {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+@media (max-width: 720px) {
+  .date-trigger {
+    min-height: 42px;
+    font-size: 16px;
+  }
+  .date-popover {
+    max-width: calc(100vw - 56px);
+  }
+}

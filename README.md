@@ -19,8 +19,9 @@ Magyar nyelvű, saját szerveren futtatható projektkezelő 3–5 fős csapatokn
 - Adminisztrátorként javítható csapattag-e-mail és belépési cím, a meglévő fiók és feladatai megtartásával.
 - Projektáttekintő, Kanban, lista, havi csapatnaptár és mobilos napi lista.
 - Feladatok felelőssel, prioritással, címkékkel, dátumos vagy pontos határidővel; részfeladatok, hozzászólások és legfeljebb 25 MB-os csatolmányok.
+- Mindig hétfővel kezdődő magyar dátumválasztó. A feladat részletei alatt közvetlenül látható hozzászólások, csapattagválasztós @említésekkel.
 - Személyes Google Naptár-kapcsolat: a felhasználó a saját naptárába teheti a feladat határidejét. OAuth nélkül előre kitöltött Google-esemény és `.ics` letöltés is elérhető.
-- Alkalmazáson belüli, e-mailes és Web Push értesítések. Öt eseménytípus, személyenként külön e-mail- és push-beállításokkal.
+- Alkalmazáson belüli, e-mailes és Web Push értesítések. Hat eseménytípus, személyenként külön e-mail- és push-beállításokkal, az @említéseket is beleértve.
 - Világos, sötét és rendszer szerinti megjelenés, fiókonként mentve.
 - Személyes Lista/Kanban alapnézet, kész feladatok megjegyzett láthatósága és mentett listarendezés. Alapból Lista, rejtett kész feladatok és növekvő határidő, a dátum nélküliek a végén.
 - Saját kézi sorrend húzással vagy a fogantyún fel/le nyilakkal. Más csapattagok sorrendjét és a közös feladatokat nem módosítja.
