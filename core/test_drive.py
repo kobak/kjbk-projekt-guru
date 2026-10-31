@@ -195,7 +195,12 @@ class DriveAttachmentTests(TestCase):
             Attachment.objects.create(task=self.task, user=self.member, kind="drive", name="Duplicate", size=0,
                 drive_file_id=self.metadata["id"], external_url=self.metadata["webViewLink"])
 
-    def test_spa_allows_google_oauth_popups_only_when_picker_is_configured(self):
-        self.assertEqual(self.client.get("/")["Cross-Origin-Opener-Policy"], "same-origin-allow-popups")
+    def test_spa_supports_restricted_picker_only_when_configured(self):
+        response = self.client.get("/")
+        self.assertEqual(response["Cross-Origin-Opener-Policy"], "same-origin-allow-popups")
+        self.assertEqual(response["Referrer-Policy"], "strict-origin-when-cross-origin")
+        self.assertEqual(self.client.get("/api/session/")["Referrer-Policy"], "same-origin")
         with override_settings(GOOGLE_PICKER_API_KEY=""):
-            self.assertNotEqual(self.client.get("/").get("Cross-Origin-Opener-Policy"), "same-origin-allow-popups")
+            response = self.client.get("/")
+            self.assertNotEqual(response.get("Cross-Origin-Opener-Policy"), "same-origin-allow-popups")
+            self.assertEqual(response["Referrer-Policy"], "same-origin")

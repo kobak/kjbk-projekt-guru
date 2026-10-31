@@ -1,5 +1,9 @@
 # Változásnapló
 
+## 1.3.1 — 2026-11-01
+
+- A korlátozott Google Picker API-kulcs működéséhez a felület elküldi a saját eredetét a Google felé. A feladat útvonala és az URL-paraméterek nem kerülnek át; az API-végpontok szigorúbb referrer-beállítása megmarad.
+
 ## 1.3.0 — 2026-11-01
 
 - A készre jelölés után 5 másodpercig elérhető Visszavonás gomb visszaállítja az előző állapotot. Lista, Kanban, áttekintő és feladatablak esetén is működik; közben módosított feladatot nem ír felül.

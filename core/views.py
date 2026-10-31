@@ -397,6 +397,9 @@ def spa(request, path=""):
     response["Cache-Control"] = "no-cache"
     if picker_config()["enabled"]:
         response["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups"
+        # Restricted Picker keys need the app's origin as the cross-origin referrer.
+        # Never send task paths or query parameters to Google.
+        response["Referrer-Policy"] = "strict-origin-when-cross-origin"
     return response
 
 def health(request):
