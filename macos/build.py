@@ -49,6 +49,9 @@ with tempfile.TemporaryDirectory(prefix="guru-mac-build-") as staging:
         subprocess.run(["xcrun", "lipo", "-create", *map(str, binaries), "-output", str(contents / "MacOS/Guru")], check=True)
     else:
         shutil.copy2(binaries[0], contents / "MacOS/Guru")
+    actual = set(subprocess.check_output(["xcrun", "lipo", "-archs", str(contents / "MacOS/Guru")], text=True).split())
+    if actual != set(architectures):
+        raise RuntimeError("The app does not contain the requested architectures.")
     iconset = temp / "Guru.iconset"
     iconset.mkdir()
     icon = REPO / "frontend/public/icon-512.png"
