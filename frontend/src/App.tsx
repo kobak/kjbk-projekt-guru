@@ -241,6 +241,7 @@ export default function App() {
   const [taskEditor, setTaskEditor] = useState<{
       id: string | null;
       status?: Status;
+      tab?: "details" | "files";
     } | null>(null),
     [projectEditor, setProjectEditor] = useState<Project | "new" | null>(null),
     [settingsOpen, setSettingsOpen] = useState(
@@ -360,10 +361,34 @@ export default function App() {
     if (!data) return;
     const t = new URLSearchParams(location.search).get("task");
     if (t) {
-      setTaskEditor({ id: t });
+      setTaskEditor({
+        id: t,
+        tab:
+          new URLSearchParams(location.search).get("files") === "1"
+            ? "files"
+            : "details",
+      });
       history.replaceState(null, "", "/");
     }
   }, [!!data]);
+  useEffect(() => {
+    const command = (event: Event) => {
+      if (!session) return;
+      switch ((event as CustomEvent<string>).detail) {
+        case "new-task":
+          setTaskEditor({ id: null });
+          break;
+        case "search":
+          searchRef.current?.focus();
+          break;
+        case "settings":
+          setSettingsOpen(true);
+          break;
+      }
+    };
+    window.addEventListener("guru-mac-command", command);
+    return () => window.removeEventListener("guru-mac-command", command);
+  }, [!!session]);
   useEffect(() => {
     const fn = (e: KeyboardEvent) => {
       const editing = (e.target as HTMLElement).closest(
@@ -1614,6 +1639,7 @@ export default function App() {
           id={taskEditor.id}
           initialProject={projectId || undefined}
           initialStatus={taskEditor.status}
+          initialTab={taskEditor.tab}
           data={data}
           onClose={() => setTaskEditor(null)}
           onSaved={reload}

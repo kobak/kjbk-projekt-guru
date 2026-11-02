@@ -220,6 +220,32 @@ def notification_json(n):
     return {"id": n.id, "title": n.title, "body": n.body, "read": n.read,
         "task_id": str(n.task_id) if n.task_id else None, "created_at": n.created_at.isoformat()}
 
+@api()
+def desktop_notifications(request):
+    """Read-only cursor feed; native delivery uses the user's existing push choices."""
+    from .notifications import notification_is_relevant, preference_channels
+    qs = Notification.objects.filter(user=request.user)
+    latest = qs.order_by("-id").values_list("id", flat=True).first() or 0
+    after = request.GET.get("after")
+    events, more, cursor = [], False, latest
+    if after is not None:
+        if not after.isascii() or not after.isdigit() or len(after) > 19 or int(after) > 9223372036854775807:
+            raise Problem("Érvénytelen értesítési kurzor.")
+        cursor = int(after)
+        rows = list(qs.filter(id__gt=cursor).select_related("task__project").order_by("id")[:101])
+        more = len(rows) > 100
+        _, enabled = preference_channels(request.user.id)
+        cutoff = timezone.now() - timedelta(days=7)
+        for notice in rows[:100]:
+            cursor = notice.id
+            if (not notice.read and notice.created_at >= cutoff and notice.kind in enabled
+                    and notification_is_relevant(notice)):
+                events.append(notification_json(notice))
+    response = JsonResponse({"user_id": request.user.id, "cursor": cursor, "has_more": more,
+        "unread": qs.filter(read=False).count(), "notifications": events})
+    response["Cache-Control"] = "private, no-store"
+    return response
+
 @api(("GET", "PATCH"))
 def notification_preferences(request):
     if request.method == "PATCH":

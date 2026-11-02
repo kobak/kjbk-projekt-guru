@@ -1,5 +1,12 @@
 # Változásnapló
 
+## 1.4.0 — 2026-11-02
+
+- Mac 0.1.0: a megszokott GURU-felület natív ablakkal, eszköztárral, menükkel, menüsoros eléréssel, Dock-jelvénnyel és natív rendszerértesítésekkel. Az ablak bezárása után tovább fut; a Kilépés leállítja.
+- Saját fiókhoz kötött, kurzorozható értesítési API, a meglévő Push-beállítások és az események aktualitásának figyelembevételével. Első belépéskor nem küldi ki a régi jelzéseket; fiókváltáskor a Mac törli a korábbi fiók helyi értesítéseit.
+- Natív fájlválasztás és mentés. Google-összekötés és Drive-fájlválasztás a rendszer böngészőjében; visszatérés után frissíthető feladat.
+- Apple-jóváhagyás előtti, helyben aláírt tesztverzió; a natív APNs, Developer ID és notarizáció későbbi bekötést igényel. Új migráció nincs.
+
 ## 1.3.1 — 2026-11-01
 
 - A korlátozott Google Picker API-kulcs működéséhez a felület elküldi a saját eredetét a Google felé. A feladat útvonala és az URL-paraméterek nem kerülnek át; az API-végpontok szigorúbb referrer-beállítása megmarad.

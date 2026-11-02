@@ -34,7 +34,7 @@ try:
     source_paths = ["config", "core", "templates", "scripts", "deploy", "docs", "frontend/src", "frontend/public", "frontend/dist",
         "frontend/tests", "frontend/index.html", "frontend/package.json", "frontend/package-lock.json", "frontend/tsconfig.json", "frontend/vite.config.ts",
         "manage.py", "Dockerfile", "compose.yaml", ".env.example", ".gitignore", ".dockerignore", "README.md", "LICENSE", "BRANDING.md",
-        "CONTRIBUTING.md", "SECURITY.md", "CHANGELOG.md", "THIRD_PARTY_NOTICES.md", "requirements.txt", "requirements.lock",
+        "CONTRIBUTING.md", "SECURITY.md", "CHANGELOG.md", "THIRD_PARTY_NOTICES.md", "macos/Sources", "macos/Tests", "macos/build.py", "macos/test.sh", "requirements.txt", "requirements.lock",
         "requirements-mariadb.txt", "requirements-native.lock", ".github"]
     def source_filter(info):
         return None if "__pycache__" in Path(info.name).parts or info.name.endswith(".pyc") else info
