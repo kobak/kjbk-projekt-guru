@@ -1,0 +1,227 @@
+.page-heading.has-announcement > div:first-child {
+  flex: 0 1 300px;
+  min-width: 0;
+}
+.page-heading.has-announcement > .heading-actions {
+  flex: 0 0 auto;
+}
+.announcement-card {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+  padding: 18px 38px 18px 18px;
+  border: 1px solid
+    color-mix(in srgb, var(--accent-foreground) 23%, var(--line));
+  border-left: 3px solid var(--accent-foreground);
+  border-radius: 12px;
+  background: linear-gradient(120deg, var(--brand-tint), var(--surface));
+}
+.page-heading.has-announcement > .announcement-card {
+  flex: 1 1 340px;
+  max-width: 650px;
+  margin-inline: auto;
+}
+.announcement-symbol {
+  display: grid;
+  place-items: center;
+  flex: 0 0 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--accent-foreground);
+}
+.announcement-content {
+  min-width: 0;
+  flex: 1;
+}
+.announcement-eyebrow {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--accent-foreground);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+.announcement-content h2 {
+  font-size: var(--panel-text, 15px);
+  font-weight: 750;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  letter-spacing: -0.25px;
+}
+.announcement-card .announcement-body {
+  margin: 6px 0 0;
+  max-width: none;
+  font-size: var(--task-text, 14px);
+  line-height: 1.6;
+  color: var(--text-secondary);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.announcement-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 11px;
+  color: var(--accent-foreground);
+  font-size: var(--task-text, 14px);
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+a.announcement-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.announcement-dismiss {
+  position: absolute;
+  right: 7px;
+  top: 7px;
+  width: 28px;
+  height: 28px;
+  color: var(--text-muted);
+}
+.announcement-admin-intro {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+}
+.announcement-admin-intro h3 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.announcement-admin-intro > .btn {
+  flex-shrink: 0;
+}
+.announcement-editor {
+  display: grid;
+  gap: 16px;
+  margin-top: 23px;
+}
+.announcement-editor label {
+  font-size: var(--task-text, 14px);
+}
+.announcement-editor input,
+.announcement-editor textarea {
+  margin-top: 7px;
+  font-size: var(--panel-text, 15px);
+}
+.announcement-link-fields {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 14px;
+}
+.announcement-preview {
+  margin-top: 26px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+.announcement-preview > .eyebrow {
+  margin-bottom: 13px;
+  display: block;
+}
+.announcement-preview .announcement-card {
+  max-width: 600px;
+}
+.announcement-history {
+  margin-top: 28px;
+  border-top: 1px solid var(--line);
+  padding-top: 21px;
+}
+.announcement-history h4 {
+  font-size: var(--panel-text, 15px);
+  margin-bottom: 10px;
+}
+.announcement-admin-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  border-bottom: 1px solid var(--line);
+  padding: 17px 0;
+}
+.announcement-admin-row > div:first-child {
+  min-width: 0;
+}
+.announcement-admin-row strong {
+  display: block;
+  font-size: var(--panel-text, 15px);
+  margin: 6px 0;
+  overflow-wrap: anywhere;
+}
+.announcement-admin-row small {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.announcement-admin-row .button-row {
+  flex-shrink: 0;
+}
+.announcement-state {
+  font-size: 10px;
+  font-weight: 650;
+  padding: 4px 7px;
+  border-radius: 5px;
+  background: var(--canvas);
+  color: var(--text-muted);
+}
+.announcement-state.published {
+  color: var(--accent-foreground);
+  background: var(--brand-tint);
+}
+.announcements-admin .error-banner {
+  margin-top: 16px;
+}
+.announcements-admin .error-banner .btn {
+  margin-top: 10px;
+}
+@media (max-width: 1200px) {
+  .page-heading.has-announcement {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 18px;
+  }
+  .page-heading.has-announcement > div:first-child {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .page-heading.has-announcement > .heading-actions {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .page-heading.has-announcement > .announcement-card {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+  }
+}
+@media (max-width: 600px) {
+  .announcement-card {
+    gap: 10px;
+    padding: 16px 35px 16px 13px;
+  }
+  .announcement-symbol {
+    flex-basis: 28px;
+    height: 28px;
+  }
+  .announcement-admin-intro,
+  .announcement-admin-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .announcement-link-fields {
+    grid-template-columns: 1fr;
+  }
+  .announcement-admin-row .button-row {
+    flex-wrap: wrap;
+  }
+  .announcement-admin-intro > .btn {
+    align-self: flex-start;
+  }
+}

@@ -39,6 +39,31 @@ class PersonalListOrder(models.Model):
 class Workspace(models.Model):
     name = models.CharField(max_length=100, default="Közös munkatér")
 
+class Announcement(models.Model):
+    title = models.CharField(max_length=120)
+    body = models.CharField(max_length=500, blank=True)
+    link_label = models.CharField(max_length=50, blank=True)
+    link_url = models.CharField(max_length=2000, blank=True)
+    active_slot = models.PositiveSmallIntegerField(null=True, blank=True, unique=True, editable=False)
+    version = models.PositiveIntegerField(default=1)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="created_announcements")
+    updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="updated_announcements")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-updated_at", "-id"]
+        constraints = [models.CheckConstraint(condition=models.Q(active_slot__isnull=True) | models.Q(active_slot=1), name="announcement_active_slot_is_one")]
+
+class AnnouncementDismissal(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    announcement = models.ForeignKey(Announcement, on_delete=models.CASCADE, related_name="dismissals")
+    version = models.PositiveIntegerField()
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["user", "announcement"], name="one_announcement_dismissal_per_user")]
+
 class RateLimit(models.Model):
     key = models.CharField(max_length=250, primary_key=True)
     count = models.PositiveIntegerField(default=0)

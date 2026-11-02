@@ -17,6 +17,7 @@ Magyar nyelvű, saját szerveren futtatható projektkezelő 3–5 fős csapatokn
 
 - Egyetlen közös munkatér, legfeljebb 5 aktív taggal; meghívásos e-mail/jelszó belépés.
 - Adminisztrátorként javítható csapattag-e-mail és belépési cím, a meglévő fiók és feladatai megtartásával.
+- [Hírsáv](docs/announcements.md) a kezdőlapon, admin szerkesztővel és élő előnézettel. Egy kiemelt hír, opcionális linkgomb, fiókonként mentett elrejtés; weben és Mac-en egyaránt.
 - Projektáttekintő, Kanban, lista, havi csapatnaptár és mobilos napi lista.
 - Feladatok felelőssel, prioritással, címkékkel, dátumos vagy pontos határidővel; részfeladatok, hozzászólások és legfeljebb 25 MB-os csatolmányok.
 - Mindig hétfővel kezdődő magyar dátumválasztó. A feladat részletei alatt közvetlenül látható hozzászólások, csapattagválasztós @említésekkel.
@@ -68,6 +69,7 @@ Demó helyett saját helyi adminhoz hagyd ki a `seed_demo` lépést, és futtasd
 | [Telepítés](docs/deployment.md) | Docker/PostgreSQL és natív Ubuntu/MariaDB, HTTPS, első admin, frissítés |
 | [Integrációk](docs/integrations.md) | Google Naptár, SMTP/Brevo, push, MCP, témaválasztás |
 | [Mac-alkalmazás](docs/mac-app.md) | Telepítés, Mac-vezérlők, értesítések, Google-működés, fordítás |
+| [Hírek](docs/announcements.md) | Admin szerkesztő, közzététel, levétel és személyes elrejtés |
 | [Mentés és visszaállítás](docs/backup-and-restore.md) | Adatbázis, csatolmányok, kulcsok és a hozzájuk illő forrásverzió |
 | [Felépítés](docs/architecture.md) | Könyvtárak, adatmodell, háttérfolyamat, jogosultságok |
 | [Közreműködés](CONTRIBUTING.md) | Fejlesztés, tesztelés, hibajelentés |
@@ -87,7 +89,7 @@ npm --prefix frontend run build
 npm --prefix frontend test
 ```
 
-A backendteszt-csomag 135 ellenőrzést tartalmaz, köztük az adminisztrátori e-mail-javítás, a személyes nézetbeállítások, a kézi sorrend, a készre jelölés visszavonása és a Drive-csatolás jogosultsági próbáit. Tizenegy frontendteszt vizsgálja a rendezést és az említéseket. A GitHub Actions a tiszta telepítést, frontend-buildet, SQLite/PostgreSQL/MariaDB teszteket és a Docker-buildet ellenőrzi. A külső Google-, SMTP- és push-küldést a tesztek helyettesítik; tesztfutás közben valódi címzettnek nem küldenek üzenetet.
+A backendteszt-csomag 149 ellenőrzést tartalmaz, köztük az adminisztrátori e-mail-javítás, a személyes nézetbeállítások, a kézi sorrend, a készre jelölés visszavonása és a Drive-csatolás jogosultsági próbáit. Tizenegy frontendteszt vizsgálja a rendezést és az említéseket. A GitHub Actions a tiszta telepítést, frontend-buildet, SQLite/PostgreSQL/MariaDB teszteket és a Docker-buildet ellenőrzi. A külső Google-, SMTP- és push-küldést a tesztek helyettesítik; tesztfutás közben valódi címzettnek nem küldenek üzenetet.
 
 Az asztali és 390 px széles mobilnézet böngészős próbán is átesett. A `theme-init.js` szinkron betöltése miatti Vite-figyelmeztetés szándékos: ez alkalmazza a választott témát az első kirajzolás előtt; a fájl a buildben is szerepel.
 
