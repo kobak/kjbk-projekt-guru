@@ -150,7 +150,7 @@ final class GuruApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNaviga
         notificationItem.title = notifications.enabled ? "Értesítések kikapcsolása" : "Értesítések bekapcsolása…"
     }
     @objc func showWindow() { window.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true) }
-    @objc private func closeWindow() { window.performClose(nil) }
+    @objc private func closeWindow() { NSApp.keyWindow?.performClose(nil) }
     @objc private func home() { showWindow(); web.load(URLRequest(url: policy.base)) }
     @objc private func refresh() {
         if let target = returnURL { returnURL = nil; web.load(URLRequest(url: target)) }

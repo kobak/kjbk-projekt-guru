@@ -19,5 +19,5 @@ jobs:
       - run: sh macos/test.sh
       - run: python3 macos/build.py
       - run: codesign --verify --deep --strict 'macos/build/kjbk projekt guru.app'
-      - run: lipo -verify_arch arm64 x86_64 'macos/build/kjbk projekt guru.app/Contents/MacOS/Guru'
+      - run: lipo 'macos/build/kjbk projekt guru.app/Contents/MacOS/Guru' -verify_arch arm64 x86_64
       - run: git diff --check

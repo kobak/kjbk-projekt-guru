@@ -56,13 +56,15 @@ Eredmény: `macos/build/kjbk projekt guru.app`, univerzális `arm64` + `x86_64` 
 Másik telepítéshez:
 
 ```sh
-python3 macos/build.py --server-url https://projekt.sajatdomain.hu --output /tmp/guru-sajat-build
+python3 macos/build.py --server-url https://projekt.sajatdomain.hu --output macos/build-sajat
 ```
 
 Elkülönített fejlesztői azonosítóval, kizárólag loopback HTTP-re:
 
 ```sh
-python3 macos/build.py --development --server-url http://127.0.0.1:8000 --architecture arm64 --output /tmp/guru-qa
+python3 macos/build.py --development --server-url http://127.0.0.1:8000 --architecture arm64 --output macos/build-qa
 ```
+
+Az értesítési próbaappot se `/tmp` vagy `/var/folders` alól indítsd: a macOS ott megtagadhatja az értesítési kliens azonosítását. Használj a saját mappádban levő buildkönyvtárat vagy az Alkalmazások mappát.
 
 Legalább GURU **1.4.0** szerver szükséges. Saját telepítéshez a KJBK arculat a [BRANDING.md](../BRANDING.md) szerint cserélendő.

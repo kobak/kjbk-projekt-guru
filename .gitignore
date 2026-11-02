@@ -27,5 +27,5 @@ backups/
 *.bundle
 privat-mentes/
 privat-kulcsok/
-macos/build/
+macos/build*/
 macos/.build/
