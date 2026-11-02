@@ -24,6 +24,7 @@ Magyar nyelvű, saját szerveren futtatható projektkezelő 3–5 fős csapatokn
 - Google Drive-fájlválasztó: mindenki a saját Google-fiókjából csatolhat fájlhivatkozást, külön feltöltés nélkül. A hozzáférést továbbra is a Drive szabályozza; a GURU-ba csak a név és a hivatkozás kerül.
 - Személyes Google Naptár-kapcsolat: a felhasználó a saját naptárába teheti a feladat határidejét. OAuth nélkül előre kitöltött Google-esemény és `.ics` letöltés is elérhető.
 - Alkalmazáson belüli, e-mailes és Web Push értesítések. Hat eseménytípus, személyenként külön e-mail- és push-beállításokkal, az @említéseket is beleértve.
+- [Mac-alkalmazás](docs/mac-app.md): a megszokott felület natív ablakkal, eszköztárral, menüsorral, Dock-jelvénnyel és háttérben működő rendszerértesítésekkel. Az első változat az Apple-jóváhagyás előtti belső tesztelésre készült.
 - Világos, sötét és rendszer szerinti megjelenés, fiókonként mentve.
 - Személyes Lista/Kanban alapnézet, kész feladatok megjegyzett láthatósága és mentett listarendezés. Alapból Lista, rejtett kész feladatok és növekvő határidő, a dátum nélküliek a végén.
 - Saját kézi sorrend húzással vagy a fogantyún fel/le nyilakkal. Más csapattagok sorrendjét és a közös feladatokat nem módosítja.
@@ -66,6 +67,7 @@ Demó helyett saját helyi adminhoz hagyd ki a `seed_demo` lépést, és futtasd
 | --- | --- |
 | [Telepítés](docs/deployment.md) | Docker/PostgreSQL és natív Ubuntu/MariaDB, HTTPS, első admin, frissítés |
 | [Integrációk](docs/integrations.md) | Google Naptár, SMTP/Brevo, push, MCP, témaválasztás |
+| [Mac-alkalmazás](docs/mac-app.md) | Telepítés, Mac-vezérlők, értesítések, Google-működés, fordítás |
 | [Mentés és visszaállítás](docs/backup-and-restore.md) | Adatbázis, csatolmányok, kulcsok és a hozzájuk illő forrásverzió |
 | [Felépítés](docs/architecture.md) | Könyvtárak, adatmodell, háttérfolyamat, jogosultságok |
 | [Közreműködés](CONTRIBUTING.md) | Fejlesztés, tesztelés, hibajelentés |
@@ -85,7 +87,7 @@ npm --prefix frontend run build
 npm --prefix frontend test
 ```
 
-A backendteszt-csomag 128 ellenőrzést tartalmaz, köztük az adminisztrátori e-mail-javítás, a személyes nézetbeállítások, a kézi sorrend, a készre jelölés visszavonása és a Drive-csatolás jogosultsági próbáit. Tizenegy frontendteszt vizsgálja a rendezést és az említéseket. A GitHub Actions a tiszta telepítést, frontend-buildet, SQLite/PostgreSQL/MariaDB teszteket és a Docker-buildet ellenőrzi. A külső Google-, SMTP- és push-küldést a tesztek helyettesítik; tesztfutás közben valódi címzettnek nem küldenek üzenetet.
+A backendteszt-csomag 135 ellenőrzést tartalmaz, köztük az adminisztrátori e-mail-javítás, a személyes nézetbeállítások, a kézi sorrend, a készre jelölés visszavonása és a Drive-csatolás jogosultsági próbáit. Tizenegy frontendteszt vizsgálja a rendezést és az említéseket. A GitHub Actions a tiszta telepítést, frontend-buildet, SQLite/PostgreSQL/MariaDB teszteket és a Docker-buildet ellenőrzi. A külső Google-, SMTP- és push-küldést a tesztek helyettesítik; tesztfutás közben valódi címzettnek nem küldenek üzenetet.
 
 Az asztali és 390 px széles mobilnézet böngészős próbán is átesett. A `theme-init.js` szinkron betöltése miatti Vite-figyelmeztetés szándékos: ez alkalmazza a választott témát az első kirajzolás előtt; a fájl a buildben is szerepel.
 

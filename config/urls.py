@@ -31,6 +31,7 @@ urlpatterns = [
     path("api/attachments/<int:attachment_id>/download/", views.attachment),
     path("api/attachments/<int:attachment_id>/", views.attachment),
     path("api/notifications/read/", views.read_notifications), path("api/push/", views.push_subscription),
+    path("api/desktop/notifications/", views.desktop_notifications),
     path("api/notification-preferences/", views.notification_preferences),
     path("api/invites/", views.invites), path("api/invites/<str:token>/", views.accept_invite),
     path("api/members/<int:user_id>/", views.member_email),

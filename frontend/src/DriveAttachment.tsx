@@ -8,13 +8,16 @@ import {
   showDrivePicker,
 } from "./drivePicker";
 import type { DriveConfig, DriveSelection } from "./drivePicker";
+import { isMacApp, macCommand } from "./desktop";
 
 export default function DriveAttachment({
   busy,
+  taskId,
   onPick,
   onExternalDialog,
 }: {
   busy: boolean;
+  taskId: string;
   onPick: (selection: DriveSelection) => Promise<void>;
   onExternalDialog: (open: boolean) => void;
 }) {
@@ -40,6 +43,10 @@ export default function DriveAttachment({
       picker.current = null;
     };
     const initialize = async () => {
+      if (isMacApp()) {
+        setReady(true);
+        return;
+      }
       const config = await api<DriveConfig>("drive/config/");
       if (!alive) return;
       setConfigured(config.enabled);
@@ -126,6 +133,13 @@ export default function DriveAttachment({
         className="btn secondary"
         disabled={!ready || busy || working}
         onClick={() => {
+          if (isMacApp()) {
+            macCommand(
+              "browser",
+              `/?task=${encodeURIComponent(taskId)}&files=1`,
+            );
+            return;
+          }
           setError("");
           setWorking(true);
           callbacks.current.onExternalDialog(true);
@@ -146,8 +160,16 @@ export default function DriveAttachment({
         ) : (
           <HardDrive size={16} />
         )}
-        Kiválasztás a Google Drive-ból
+        {isMacApp()
+          ? "Drive-fájlválasztás böngészőben"
+          : "Kiválasztás a Google Drive-ból"}
       </button>
+      {isMacApp() && (
+        <p className="form-hint">
+          A Google-fájlválasztó a rendszer böngészőjében nyílik meg. Csatolás
+          után a Mac-app Frissítés gombjával láthatod a változást.
+        </p>
+      )}
       {configured === false && (
         <p className="form-hint">
           A Google Drive-kapcsolat beállítása még folyamatban van.

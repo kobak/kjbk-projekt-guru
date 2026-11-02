@@ -24,6 +24,7 @@ type Props = {
   id: string | null;
   initialProject?: string;
   initialStatus?: Status;
+  initialTab?: "details" | "files";
   data: Bootstrap;
   onClose: () => void;
   onSaved: () => Promise<void>;
@@ -34,6 +35,7 @@ export default function TaskPanel({
   id,
   initialProject,
   initialStatus,
+  initialTab = "details",
   data,
   onClose,
   onSaved,
@@ -58,7 +60,7 @@ export default function TaskPanel({
   const [comment, setComment] = useState(""),
     [mentions, setMentions] = useState<Mention[]>([]),
     [check, setCheck] = useState(""),
-    [tab, setTab] = useState("details"),
+    [tab, setTab] = useState(initialTab),
     [editVersion, setEditVersion] = useState(0),
     [conflict, setConflict] = useState(false);
   const [externalDialogOpen, setExternalDialogOpen] = useState(false);
@@ -670,6 +672,7 @@ export default function TaskPanel({
             <div className="files-section">
               {!archived && (
                 <DriveAttachment
+                  taskId={id!}
                   busy={busy}
                   onExternalDialog={setExternalDialogOpen}
                   onPick={(selection) =>

@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import type { Bootstrap } from "./types";
 import { api } from "./api";
+import { isMacApp, macCommand, macNotificationsEnabled } from "./desktop";
 import { Avatar, Modal } from "./ui";
 import NotificationPreferences from "./NotificationPreferences";
 import ThemeSwitcher from "./ThemeSwitcher";
@@ -49,7 +50,7 @@ export default function Settings({
   const [name, setName] = useState(data.user.name),
     [password, setPassword] = useState(""),
     [current, setCurrent] = useState(""),
-    [pushOn, setPushOn] = useState(false);
+    [pushOn, setPushOn] = useState(macNotificationsEnabled);
   const [connections, setConnections] = useState<
     { id: number; name: string }[]
   >([]);
@@ -58,11 +59,17 @@ export default function Settings({
       setInvites(r.invites),
     );
   useEffect(() => {
+    if (!isMacApp()) return;
+    const update = () => setPushOn(macNotificationsEnabled());
+    window.addEventListener("guru-mac-notifications", update);
+    return () => window.removeEventListener("guru-mac-notifications", update);
+  }, []);
+  useEffect(() => {
     if (data.user.admin) refreshInvites().catch(() => {});
     api<{ connections: typeof connections }>("mcp/connections/")
       .then((r) => setConnections(r.connections))
       .catch(() => {});
-    if ("serviceWorker" in navigator)
+    if (!isMacApp() && "serviceWorker" in navigator)
       navigator.serviceWorker
         .getRegistration("/")
         .then((r) => r?.pushManager.getSubscription())
@@ -83,6 +90,10 @@ export default function Settings({
     }
   };
   const push = async () => {
+    if (isMacApp()) {
+      macCommand("notifications");
+      return;
+    }
     if (
       !("serviceWorker" in navigator) ||
       !("PushManager" in window) ||
@@ -249,7 +260,7 @@ export default function Settings({
                 <BellRing size={23} />
               </div>
               <div className="settings-heading">
-                <h3>Push értesítések</h3>
+                <h3>{isMacApp() ? "Mac-értesítések" : "Push értesítések"}</h3>
                 <span
                   className={"connection-status " + (pushOn ? "connected" : "")}
                 >
@@ -257,20 +268,24 @@ export default function Settings({
                 </span>
               </div>
               <p>
-                Új feladatok, hozzászólások és közelgő határidők, akkor is, ha
-                az alkalmazás nincs megnyitva. Az alkalmazáson belüli
-                értesítések mindig elérhetők.
+                {isMacApp()
+                  ? "Natív rendszerértesítések, amíg a GURU a háttérben fut. Az ablakot bezárhatod; a külön Kilépés leállítja az értesítések ellenőrzését."
+                  : "Új feladatok, hozzászólások és közelgő határidők, akkor is, ha az alkalmazás nincs megnyitva. Az alkalmazáson belüli értesítések mindig elérhetők."}
               </p>
               <button
                 className="btn secondary"
-                disabled={busy || !data.integrations.push_configured}
+                disabled={
+                  busy || (!isMacApp() && !data.integrations.push_configured)
+                }
                 onClick={() =>
-                  run(
-                    push,
-                    pushOn
-                      ? "Push kikapcsolva"
-                      : "Push értesítések bekapcsolva",
-                  )
+                  isMacApp()
+                    ? push()
+                    : run(
+                        push,
+                        pushOn
+                          ? "Push kikapcsolva"
+                          : "Push értesítések bekapcsolva",
+                      )
                 }
               >
                 <BellRing size={16} />
@@ -279,8 +294,15 @@ export default function Settings({
                   : "Értesítések engedélyezése"}
               </button>
               <p className="form-hint">
-                iPhone-on: Megosztás → Főképernyőhöz adás, majd az alkalmazásból
-                engedélyezd az értesítést. Internetkapcsolat és HTTPS szükséges.
+                {isMacApp() ? (
+                  "Az eseménytípusokat az Értesítések fül Push oszlopában állíthatod. A Mac rendszerengedélye és az app kapcsolója is szükséges."
+                ) : (
+                  <>
+                    iPhone-on: Megosztás → Főképernyőhöz adás, majd az
+                    alkalmazásból engedélyezd az értesítést. Internetkapcsolat
+                    és HTTPS szükséges.
+                  </>
+                )}
               </p>
             </section>
             <section className="settings-section">
