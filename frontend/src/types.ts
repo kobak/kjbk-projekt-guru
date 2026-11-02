@@ -76,6 +76,18 @@ export type Notice = {
   task_id: string | null;
   created_at: string;
 };
+export type Announcement = {
+  id: number;
+  title: string;
+  body: string;
+  link_label: string;
+  link_url: string;
+  version: number;
+};
+export type AdminAnnouncement = Announcement & {
+  published: boolean;
+  updated_at: string;
+};
 export type Integrations = {
   email_configured: boolean;
   google_configured: boolean;
@@ -94,6 +106,7 @@ export type NotificationPreferences = {
   email_configured: boolean;
 };
 export type Bootstrap = {
+  announcement: Announcement | null;
   appearance: Appearance;
   list_order: ListOrder;
   workspace: string;

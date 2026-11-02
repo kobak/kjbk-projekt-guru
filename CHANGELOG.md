@@ -1,5 +1,12 @@
 # Változásnapló
 
+## 1.5.0 — 2026-11-02
+
+- Rövid hírsáv a kezdőlap köszöntése és az Új feladat gomb között, mobilon alájuk rendezve. Weben és a meglévő Mac-appban is működik.
+- Csak adminoknak látható Beállítások → Hírek fül: cím, szöveg, opcionális linkgomb, élő előnézet, vázlatmentés, közzététel és levétel. Egyszerre egy hír lehet kiemelve.
+- Fiókonként és hírverziónként mentett elrejtés. Az új vagy megváltozott hír ismét megjelenik; párhuzamos szerkesztés és elavult elrejtési kérés nem írja felül az új állapotot.
+- `0008_announcements` migráció. A 14 új szerveroldali próba a jogosultságokat, linkellenőrzést, egyetlen aktív hírt és személyes elrejtést vizsgálja. A hírek nem hoznak létre feladatot vagy automatikus értesítést.
+
 ## 1.4.0 — 2026-11-02
 
 - Mac 0.1.0: a megszokott GURU-felület natív ablakkal, eszköztárral, menükkel, menüsoros eléréssel, Dock-jelvénnyel és natív rendszerértesítésekkel. Az ablak bezárása után tovább fut; a Kilépés leállítja.

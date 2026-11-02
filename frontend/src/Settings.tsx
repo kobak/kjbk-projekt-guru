@@ -22,6 +22,7 @@ import { Avatar, Modal } from "./ui";
 import NotificationPreferences from "./NotificationPreferences";
 import ThemeSwitcher from "./ThemeSwitcher";
 import MemberEmailEditor from "./MemberEmailEditor";
+import AnnouncementsAdmin from "./AnnouncementsAdmin";
 
 export default function Settings({
   data,
@@ -38,7 +39,9 @@ export default function Settings({
   onLogout: () => void;
   initialTab?: string;
 }) {
-  const [tab, setTab] = useState(initialTab),
+  const [tab, setTab] = useState(
+      initialTab === "news" && !data.user.admin ? "connections" : initialTab,
+    ),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [email, setEmail] = useState(""),
@@ -173,8 +176,19 @@ export default function Settings({
         >
           Saját fiók
         </button>
+        {data.user.admin && (
+          <button
+            className={tab === "news" ? "active" : ""}
+            onClick={() => setTab("news")}
+          >
+            Hírek
+          </button>
+        )}
       </div>
       <div className="settings-content">
+        {tab === "news" && data.user.admin && (
+          <AnnouncementsAdmin onChanged={reload} toast={toast} />
+        )}
         {error && (
           <div className="error-banner" role="alert">
             {error}

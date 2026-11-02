@@ -52,6 +52,7 @@ import TaskPanel from "./TaskPanel";
 import TaskList from "./TaskList";
 import { sortListTasks } from "./listSorting";
 import Settings from "./Settings";
+import AnnouncementCard from "./AnnouncementCard";
 import Brand, { brandProjectColor, projectDisplayColor } from "./Brand";
 import ThemeSwitcher from "./ThemeSwitcher";
 import {
@@ -247,12 +248,14 @@ export default function App() {
     [settingsOpen, setSettingsOpen] = useState(
       new URLSearchParams(location.search).has("settings"),
     );
-  const [settingsInitialTab, setSettingsInitialTab] = useState(
-    new URLSearchParams(location.search).get("settings") === "notifications"
-      ? "notifications"
-      : "connections",
-  );
+  const [settingsInitialTab, setSettingsInitialTab] = useState(() => {
+    const requested = new URLSearchParams(location.search).get("settings");
+    return requested === "notifications" || requested === "news"
+      ? requested
+      : "connections";
+  });
   const [noticesOpen, setNoticesOpen] = useState(false),
+    [announcementBusy, setAnnouncementBusy] = useState(false),
     [toast, setToast] = useState<ToastMessage | null>(null),
     [refreshing, setRefreshing] = useState(false),
     [focusOwn, setFocusOwn] = useState(true);
@@ -805,7 +808,12 @@ export default function App() {
           </div>
         </header>
         <main className="main-content">
-          <div className="page-heading">
+          <div
+            className={
+              "page-heading" +
+              (isOverview && data.announcement ? " has-announcement" : "")
+            }
+          >
             <div>
               {isOverview ? (
                 <>
@@ -869,6 +877,35 @@ export default function App() {
                 </>
               )}
             </div>
+            {isOverview && data.announcement && (
+              <AnnouncementCard
+                announcement={data.announcement}
+                busy={announcementBusy}
+                onDismiss={async () => {
+                  const item = data.announcement;
+                  if (!item || announcementBusy) return;
+                  setAnnouncementBusy(true);
+                  try {
+                    await api(`announcements/${item.id}/dismiss/`, "POST", {
+                      version: item.version,
+                    });
+                    setData((current) =>
+                      current?.announcement?.id === item.id &&
+                      current.announcement.version === item.version
+                        ? { ...current, announcement: null }
+                        : current,
+                    );
+                    showToast("Hír elrejtve a saját fiókodban");
+                    await reload();
+                  } catch (e) {
+                    showToast((e as Error).message);
+                    reload().catch(() => {});
+                  } finally {
+                    setAnnouncementBusy(false);
+                  }
+                }}
+              />
+            )}
             <div className="heading-actions">
               {project && (
                 <button

@@ -22,6 +22,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from .models import Workspace, Project, Task, ChecklistItem, Attachment, Notification, Activity, Invite, PushSubscription, GoogleConnection, CalendarLink
 from .services import Problem, person, project_json, task_json, task_queryset, text, password_text, save_project, save_task, delete_task, activity
 from .calendar import SCOPE, cipher, sync_link, calendar_file
+from .announcements import announcement_json, visible_announcement, save_announcement, set_publication, dismiss_announcement
 from .notifications import preference_json, save_preferences, email_configured
 from .appearance import appearance_json, save_appearance
 from .members import change_member_email
@@ -115,6 +116,7 @@ def bootstrap(request):
     return {"workspace": ws.name if ws else "Közös munkatér", "user": person(request.user),
         "appearance": appearance_json(request.user),
         "list_order": list_order_json(request.user),
+        "announcement": visible_announcement(request.user),
         "members": [person(u) for u in User.objects.filter(is_active=True).order_by("id")],
         "projects": [project_json(p) for p in Project.objects.order_by("created_at")],
         "tasks": [task_json(t, request.user) for t in tasks],
@@ -132,6 +134,25 @@ def integration_state(user):
         "email_configured": email_configured(),
         "push_configured": bool(settings.VAPID_PUBLIC_KEY and settings.VAPID_PRIVATE_KEY),
         "vapid_public_key": settings.VAPID_PUBLIC_KEY, "mcp_url": settings.APP_URL + "/mcp"}
+
+@api(("GET", "POST"), admin=True)
+def announcements(request):
+    from .models import Announcement
+    if request.method == "POST":
+        return {"announcement": save_announcement(request.data, request.user)}
+    return {"announcements": [announcement_json(item, admin=True) for item in Announcement.objects.all()]}
+
+@api(("PATCH",), admin=True)
+def announcement_edit(request, announcement_id):
+    return {"announcement": save_announcement(request.data, request.user, announcement_id)}
+
+@api(("POST",), admin=True)
+def announcement_publish(request, announcement_id, published=True):
+    return {"announcement": set_publication(announcement_id, request.data, request.user, published)}
+
+@api(("POST",))
+def announcement_dismiss(request, announcement_id):
+    return dismiss_announcement(announcement_id, request.data, request.user)
 
 @api(("POST", "PATCH"))
 def projects(request, project_id=None):
