@@ -2,8 +2,9 @@ import re
 from datetime import date, time
 from django.contrib.auth.models import User
 from django.db import transaction
+from django.db.models import Prefetch
 from django.utils import timezone
-from .models import Project, Task, ChecklistItem, Notification, Activity
+from .models import Project, Task, ChecklistItem, Notification, Activity, Attachment
 from .notifications import preference_channels, email_configured
 
 class Problem(Exception):
@@ -36,12 +37,16 @@ def task_json(t, user, detail=False):
             data["calendar_ics_url"] = f"/api/tasks/{t.id}/calendar.ics"
         data["comments"] = [{"id": c.id, "user": person(c.user), "body": c.body, "mentions": c.mentions, "created_at": c.created_at.isoformat()} for c in t.comments.select_related("user")]
         data["attachments"] = [{"id": a.id, "name": a.name, "size": a.size, "kind": a.kind,
+            "added_by": a.user.first_name or a.user.username, "created_at": a.created_at.isoformat(),
             "url": a.external_url if a.kind == "drive" else f"/api/attachments/{a.id}/download/",
             "can_delete": not t.project_archived and (a.user_id == user.id or user.is_staff)} for a in t.attachments.all()]
     return data
 
 def task_queryset(user):
-    return Task.objects.visible_to(user).filter(deleted=False).select_related("project", "assignee").prefetch_related("checklist", "comments", "attachments", "calendar_links")
+    return Task.objects.visible_to(user).filter(deleted=False).select_related("project", "assignee").prefetch_related(
+        "checklist", "comments", "calendar_links",
+        Prefetch("attachments", queryset=Attachment.objects.select_related("user")),
+    )
 
 def text(data, key, maximum, required=False):
     value = data.get(key, "")
