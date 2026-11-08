@@ -27,7 +27,7 @@ export type Project = {
 export type Status = "todo" | "doing" | "review" | "done";
 export type Task = {
   id: string;
-  project_id: string;
+  project_id: string | null;
   title: string;
   description: string;
   status: Status;

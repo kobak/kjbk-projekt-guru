@@ -20,7 +20,7 @@ def project_json(p):
 def task_json(t, user, detail=False):
     links = [l for l in t.calendar_links.all() if l.user_id == user.id]
     link = links[0] if links else None
-    data = {"id": str(t.id), "project_id": str(t.project_id), "title": t.title, "description": t.description,
+    data = {"id": str(t.id), "project_id": str(t.project_id) if t.project_id is not None else None, "title": t.title, "description": t.description,
         "status": t.status, "priority": t.priority, "assignee_id": t.assignee_id, "created_by_id": t.created_by_id,
         "due_date": t.due_date.isoformat() if t.due_date else None,
         "due_time": t.due_time.strftime("%H:%M") if t.due_time else None, "labels": t.labels,
@@ -37,11 +37,11 @@ def task_json(t, user, detail=False):
         data["comments"] = [{"id": c.id, "user": person(c.user), "body": c.body, "mentions": c.mentions, "created_at": c.created_at.isoformat()} for c in t.comments.select_related("user")]
         data["attachments"] = [{"id": a.id, "name": a.name, "size": a.size, "kind": a.kind,
             "url": a.external_url if a.kind == "drive" else f"/api/attachments/{a.id}/download/",
-            "can_delete": not t.project.archived and (a.user_id == user.id or user.is_staff)} for a in t.attachments.all()]
+            "can_delete": not t.project_archived and (a.user_id == user.id or user.is_staff)} for a in t.attachments.all()]
     return data
 
-def task_queryset():
-    return Task.objects.filter(deleted=False).select_related("project", "assignee").prefetch_related("checklist", "comments", "attachments", "calendar_links")
+def task_queryset(user):
+    return Task.objects.visible_to(user).filter(deleted=False).select_related("project", "assignee").prefetch_related("checklist", "comments", "attachments", "calendar_links")
 
 def text(data, key, maximum, required=False):
     value = data.get(key, "")
@@ -56,7 +56,7 @@ def password_text(data, key="password"):
     return value
 
 def notify(user_id, task, title, body="", key=None, *, kind=Notification.Kind.LEGACY):
-    if not user_id:
+    if not user_id or (task.project_id is None and user_id != task.created_by_id):
         return
     email_events, push_events = preference_channels(user_id)
     values = {"user_id": user_id, "task": task, "title": title[:250], "body": body[:500], "kind": kind,
@@ -93,7 +93,7 @@ def save_task(data, user, task_id=None):
         raise Problem("A kérésnek objektumnak kell lennie.")
     if task_id:
         try:
-            t = Task.objects.select_for_update().get(id=task_id, deleted=False)
+            t = Task.objects.visible_to(user).select_for_update().get(id=task_id, deleted=False)
         except Task.DoesNotExist:
             raise Problem("A feladat nem található.", 404)
         if data.get("version") != t.version:
@@ -105,12 +105,18 @@ def save_task(data, user, task_id=None):
         t.title = text(data, "title", 250, True)
     if "description" in data:
         t.description = text(data, "description", 20000)
-    if "project_id" in data or not task_id:
-        try:
-            t.project = Project.objects.get(id=data.get("project_id"), archived=False)
-        except (Project.DoesNotExist, ValueError, TypeError):
-            raise Problem("Válassz egy aktív projektet.")
-    elif t.project.archived:
+    if not task_id and "project_id" not in data:
+        raise Problem("Válassz egy projektet vagy a Nincs projekt lehetőséget.")
+    if "project_id" in data:
+        project_id = data["project_id"]
+        if task_id and (project_id is None) != (t.project_id is None):
+            raise Problem("A feladat privát vagy közös jellege létrehozás után nem módosítható.")
+        if project_id is not None:
+            try:
+                t.project = Project.objects.get(id=project_id, archived=False)
+            except (Project.DoesNotExist, ValueError, TypeError):
+                raise Problem("Válassz egy aktív projektet.")
+    elif t.project_archived:
         raise Problem("Az archivált projekt feladatai csak olvashatók.")
     for field, choices in [("status", Task.Status.values), ("priority", Task.Priority.values)]:
         if field in data:
@@ -122,6 +128,10 @@ def save_task(data, user, task_id=None):
         if value is not None and (isinstance(value, bool) or not isinstance(value, int) or not User.objects.filter(id=value, is_active=True).exists()):
             raise Problem("A felelős nem található.")
         t.assignee_id = value
+    if t.project_id is None:
+        if t.assignee_id not in (None, t.created_by_id):
+            raise Problem("A privát teendő felelőse csak a létrehozója lehet.")
+        t.assignee_id = t.created_by_id
     for field, parser in [("due_date", date.fromisoformat), ("due_time", time.fromisoformat)]:
         if field in data:
             try:
@@ -154,8 +164,8 @@ def save_task(data, user, task_id=None):
 
 @transaction.atomic
 def delete_task(task_id, version, user):
-    t = Task.objects.select_for_update().get(id=task_id, deleted=False)
-    if t.project.archived:
+    t = Task.objects.visible_to(user).select_for_update().get(id=task_id, deleted=False)
+    if t.project_archived:
         raise Problem("Az archivált projekt feladatai csak olvashatók.")
     if version != t.version:
         raise Problem("A feladat közben módosult. Frissítsd a nézetet.", 409)

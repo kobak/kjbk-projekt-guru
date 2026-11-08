@@ -7,8 +7,9 @@ from .models import PersonalListOrder, Task
 from .services import Problem
 
 
-def ordered_task_ids(saved_ids):
-    existing = [str(value) for value in Task.objects.filter(deleted=False).order_by("position", "created_at", "id").values_list("id", flat=True)]
+def ordered_task_ids(user, saved_ids):
+    existing = [str(value) for value in Task.objects.visible_to(user).filter(deleted=False)
+        .order_by("position", "created_at", "id").values_list("id", flat=True)]
     alive = set(existing)
     saved = list(dict.fromkeys(value for value in saved_ids if value in alive))
     selected = set(saved)
@@ -17,7 +18,7 @@ def ordered_task_ids(saved_ids):
 
 def list_order_json(user):
     order = PersonalListOrder.objects.filter(user=user).first()
-    return {"task_ids": ordered_task_ids(order.task_ids if order else []), "version": order.version if order else 0}
+    return {"task_ids": ordered_task_ids(user, order.task_ids if order else []), "version": order.version if order else 0}
 
 
 def save_list_order(user, data):
@@ -37,12 +38,12 @@ def save_list_order(user, data):
         version = order.version if order else 0
         if data["version"] != version:
             raise Problem("A személyes sorrended közben megváltozott. Frissítsd a listát, majd próbáld újra.", 409)
-        tasks = list(Task.objects.filter(id__in=[moving, target], deleted=False).select_related("project"))
+        tasks = list(Task.objects.visible_to(user).filter(id__in=[moving, target], deleted=False).select_related("project"))
         if len(tasks) != len({moving, target}):
             raise Problem("A feladat már nem található. Frissítsd a listát.", 404)
-        if any(task.project.archived for task in tasks):
+        if any(task.project_archived for task in tasks):
             raise Problem("Archivált projekt feladata nem rendezhető át.")
-        ids = ordered_task_ids(order.task_ids if order else [])
+        ids = ordered_task_ids(user, order.task_ids if order else [])
         if moving != target:
             ids.remove(moving)
             ids.insert(ids.index(target) + (data["placement"] == "after"), moving)

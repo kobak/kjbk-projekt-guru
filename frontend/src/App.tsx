@@ -264,6 +264,7 @@ export default function App() {
     toastSequence = useRef(0),
     toastRef = useRef<ToastMessage | null>(null),
     statusBusy = useRef(new Set<string>());
+  const bootstrapSequence = useRef(0);
   const dismissToast = useCallback((id?: number) => {
     if (id !== undefined && toastRef.current?.id !== id) return;
     clearTimeout(toastTimer.current);
@@ -306,8 +307,10 @@ export default function App() {
     }
   };
   const reload = useCallback(async () => {
+    const requestId = ++bootstrapSequence.current;
     try {
       const next = await api<Bootstrap>("bootstrap/");
+      if (requestId !== bootstrapSequence.current) return;
       syncAppearance(next.user.id, next.appearance);
       next.projects = next.projects.map((project) => ({
         ...project,
@@ -322,6 +325,7 @@ export default function App() {
       setSession(next.user);
       setFatal("");
     } catch (e) {
+      if (requestId !== bootstrapSequence.current) return;
       if (e instanceof ApiError && e.status === 401) {
         resetAppearance();
         setSession(null);
@@ -544,7 +548,7 @@ export default function App() {
       ),
     [filtered, appearance.list_sort, data?.list_order],
   );
-  if (fatal && !data)
+  if (fatal && (!data || data.user.id !== session?.id))
     return (
       <div className="loading-screen">
         <AlertCircle size={30} />
@@ -556,7 +560,7 @@ export default function App() {
         </button>
       </div>
     );
-  if (session === undefined || (session && !data))
+  if (session === undefined || (session && data?.user.id !== session.id))
     return (
       <div className="loading-screen">
         <span className="brand">
@@ -581,10 +585,7 @@ export default function App() {
     .slice(0, 5);
   const isOverview = page === "overview" && !query;
   const createTask = (status?: Status) => {
-    if (!data.projects.some((p) => !p.archived)) {
-      setProjectEditor("new");
-      showToast("Először hozzunk létre egy projektet.");
-    } else setTaskEditor({ id: null, status });
+    setTaskEditor({ id: null, status });
   };
   const projectProgress = (p: Project) => {
     const ts = data.tasks.filter((t) => t.project_id === p.id);
@@ -1154,10 +1155,10 @@ export default function App() {
                                   ),
                                 }}
                               />
-                              {
-                                data.projects.find((p) => p.id === t.project_id)
-                                  ?.name
-                              }
+                              {t.project_id === null
+                                ? "Privát teendő"
+                                : data.projects.find((p) => p.id === t.project_id)
+                                    ?.name}
                             </span>
                           </button>
                           <span
@@ -1672,7 +1673,7 @@ export default function App() {
       )}
       {taskEditor && (
         <TaskPanel
-          key={taskEditor.id || "new"}
+          key={session.id + ":" + (taskEditor.id || "new")}
           id={taskEditor.id}
           initialProject={projectId || undefined}
           initialStatus={taskEditor.status}
@@ -1718,8 +1719,10 @@ export default function App() {
                 }
               }
               await api("logout/", "POST");
+              bootstrapSequence.current++;
               resetAppearance();
               setSettingsOpen(false);
+              setTaskEditor(null);
               setData(null);
               setSession(null);
               await api("session/");
@@ -1804,7 +1807,7 @@ function TaskCard({
       {!hideProject && (
         <button className="card-project" onClick={onOpen}>
           <span style={{ background: projectDisplayColor(p?.color) }} />
-          {p?.name}
+          {t.project_id === null ? "Privát teendő" : p?.name}
         </button>
       )}
       {t.checklist.length > 0 && (
