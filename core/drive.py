@@ -33,7 +33,8 @@ def link_drive_file(task_id, user, data):
     if not isinstance(token, str) or len(token) > 4096 or not re.fullmatch(r"[A-Za-z0-9._~+/-]+=*", token):
         raise Problem("Válaszd ki újra a fájlt a Google Drive-ból.")
     # Check the task before contacting Google, then lock and check it again on save.
-    Task.objects.get(id=task_id, deleted=False, project__archived=False)
+    tasks = Task.objects.visible_to(user).not_archived().filter(deleted=False)
+    tasks.get(id=task_id)
     headers = {"Authorization": f"Bearer {token}"}
     if resource_key:
         headers["X-Goog-Drive-Resource-Keys"] = f"{file_id}/{resource_key}"
@@ -70,7 +71,7 @@ def link_drive_file(task_id, user, data):
     except (ValueError, TypeError, AttributeError):
         raise Problem("A Google Drive érvénytelen fájlhivatkozást adott vissza.", 502)
     with transaction.atomic():
-        task = Task.objects.select_for_update().get(id=task_id, deleted=False, project__archived=False)
+        task = tasks.select_for_update().get(id=task_id)
         attachment, created = Attachment.objects.get_or_create(task=task, drive_file_hash=hashlib.sha256(file_id.encode()).hexdigest(),
             defaults={"user": user, "kind": "drive", "file": "", "size": 0, "drive_file_id": file_id,
                 "name": metadata["name"].strip()[:255], "external_url": url})

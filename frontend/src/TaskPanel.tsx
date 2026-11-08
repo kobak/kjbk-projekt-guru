@@ -67,7 +67,7 @@ export default function TaskPanel({
   const applyFields = (t: Task) => {
     setTitle(t.title);
     setDescription(t.description);
-    setProject(t.project_id);
+    setProject(t.project_id ?? "");
     setStatus(t.status);
     setPriority(t.priority);
     setAssignee(String(t.assignee_id || ""));
@@ -77,6 +77,7 @@ export default function TaskPanel({
     setEditVersion(t.version);
     setConflict(false);
   };
+  const isPrivate = project === "";
   const load = async () => {
     if (!id) return;
     const r = await api<{ task: Task }>(`tasks/${id}/`);
@@ -127,10 +128,14 @@ export default function TaskPanel({
         {
           title,
           description,
-          project_id: project,
+          project_id: project || null,
           status,
           priority,
-          assignee_id: assignee ? Number(assignee) : null,
+          assignee_id: isPrivate
+            ? data.user.id
+            : assignee
+              ? Number(assignee)
+              : null,
           due_date: dueDate || null,
           due_time: dueDate && dueTime ? dueTime : null,
           labels: labels
@@ -160,7 +165,7 @@ export default function TaskPanel({
     const changed = task
       ? title !== task.title ||
         description !== task.description ||
-        project !== task.project_id ||
+        (project || null) !== task.project_id ||
         status !== task.status ||
         priority !== task.priority ||
         assignee !== String(task.assignee_id || "") ||
@@ -258,10 +263,11 @@ export default function TaskPanel({
                   <select
                     value={project}
                     onChange={(e) => setProject(e.target.value)}
-                    required
-                    disabled={archived}
+                    disabled={archived || (!!id && isPrivate)}
                   >
-                    {!project && <option value="">Válassz projektet</option>}
+                    {(!id || isPrivate) && (
+                      <option value="">Nincs projekt (privát)</option>
+                    )}
                     {data.projects
                       .filter((p) => !p.archived || p.id === project)
                       .map((p) => (
@@ -288,9 +294,9 @@ export default function TaskPanel({
                 <label>
                   Felelős
                   <select
-                    value={assignee}
+                    value={isPrivate ? String(data.user.id) : assignee}
                     onChange={(e) => setAssignee(e.target.value)}
-                    disabled={archived}
+                    disabled={archived || isPrivate}
                   >
                     <option value="">Még nincs felelős</option>
                     {data.members.map((u) => (
@@ -599,7 +605,7 @@ export default function TaskPanel({
                     Bezárás
                   </button>
                   {!archived && (
-                    <button className="btn primary" disabled={busy || !project}>
+                    <button className="btn primary" disabled={busy}>
                       {busy ? (
                         <LoaderCircle size={16} className="spin" />
                       ) : (
@@ -648,7 +654,7 @@ export default function TaskPanel({
                 <CommentComposer
                   body={comment}
                   mentions={mentions}
-                  members={data.members}
+                  members={task?.project_id === null ? [] : data.members}
                   busy={busy}
                   onChange={(body, selected) => {
                     setComment(body);

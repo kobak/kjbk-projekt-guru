@@ -84,6 +84,14 @@ class Project(models.Model):
     archived = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
+class TaskQuerySet(models.QuerySet):
+    def visible_to(self, user):
+        return self.filter(models.Q(project_id__isnull=False) | models.Q(created_by=user))
+
+    def not_archived(self):
+        return self.filter(models.Q(project_id__isnull=True) | models.Q(project_id__in=Project.objects.filter(archived=False)))
+
+
 class Task(models.Model):
     class Status(models.TextChoices):
         TODO = "todo", "Teendő"
@@ -96,7 +104,7 @@ class Task(models.Model):
         HIGH = "high", "Magas"
         URGENT = "urgent", "Sürgős"
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    project = models.ForeignKey(Project, on_delete=models.PROTECT, related_name="tasks")
+    project = models.ForeignKey(Project, null=True, blank=True, on_delete=models.PROTECT, related_name="tasks")
     title = models.CharField(max_length=250)
     description = models.TextField(blank=True)
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.TODO)
@@ -111,6 +119,16 @@ class Task(models.Model):
     deleted = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    objects = TaskQuerySet.as_manager()
+
+    @property
+    def project_archived(self):
+        return self.project_id is not None and self.project.archived
+
+    @property
+    def project_name(self):
+        return self.project.name if self.project_id is not None else "Privát teendő"
+
     class Meta:
         indexes = [models.Index(fields=["deleted", "due_date"]), models.Index(fields=["project", "status"])]
 

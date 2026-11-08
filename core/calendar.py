@@ -21,9 +21,11 @@ def cipher():
 
 def event_payload(task):
     result = {"summary": ("✓ " if task.status == "done" else "") + task.title,
-        "description": f"{task.project.name}\n\n{task.description}\n\n{settings.APP_URL}/?task={task.id}",
+        "description": f"{task.project_name}\n\n{task.description}\n\n{settings.APP_URL}/?task={task.id}",
         "source": {"title": "kjbk projekt guru", "url": f"{settings.APP_URL}/?task={task.id}"},
         "transparency": "transparent", "extendedProperties": {"private": {"kozos_task": str(task.id)}}}
+    if task.project_id is None:
+        result["visibility"] = "private"
     if task.due_time:
         start = datetime.combine(task.due_date, task.due_time, ZoneInfo(settings.TIME_ZONE))
         result["start"] = {"dateTime": start.isoformat(), "timeZone": settings.TIME_ZONE}
@@ -46,7 +48,7 @@ def template_url(task):
     start, end = event_dates(task)
     return "https://calendar.google.com/calendar/render?" + urlencode({"action": "TEMPLATE", "text": task.title,
         "dates": start + "/" + end, "ctz": settings.TIME_ZONE,
-        "details": f"{task.project.name}\n\n{task.description[:700]}\n\n{settings.APP_URL}/?task={task.id}"})
+        "details": f"{task.project_name}\n\n{task.description[:700]}\n\n{settings.APP_URL}/?task={task.id}"})
 
 def calendar_file(task):
     def escape(value):
@@ -67,8 +69,10 @@ def calendar_file(task):
         "BEGIN:VEVENT", f"UID:{task.id}@{urlparse(settings.APP_URL).hostname}",
         "DTSTAMP:" + timezone.now().strftime("%Y%m%dT%H%M%SZ"),
         f"DTSTART{date_suffix}:{start}", f"DTEND{date_suffix}:{end}", "SUMMARY:" + escape(task.title),
-        "DESCRIPTION:" + escape(f"{task.project.name}\n\n{task.description}\n\n{settings.APP_URL}/?task={task.id}"),
+        "DESCRIPTION:" + escape(f"{task.project_name}\n\n{task.description}\n\n{settings.APP_URL}/?task={task.id}"),
         "TRANSP:TRANSPARENT", "END:VEVENT", "END:VCALENDAR"]
+    if task.project_id is None:
+        lines.insert(-2, "CLASS:PRIVATE")
     return "\r\n".join(fold(line) for line in lines) + "\r\n"
 
 def access_token(connection):
@@ -83,7 +87,7 @@ def access_token(connection):
 def sync_link(link_id):
     # Row lock serializes browser and worker writes; deterministic IDs make retries idempotent.
     with transaction.atomic():
-        link = CalendarLink.objects.select_for_update().select_related("task__project", "user").get(id=link_id)
+        link = CalendarLink.objects.select_for_update().select_related("task", "user").get(id=link_id)
         task = link.task
         link.attempted_at = timezone.now()
         link.save(update_fields=["attempted_at"])

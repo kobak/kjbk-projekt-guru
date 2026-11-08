@@ -89,7 +89,7 @@ def send_notification_push(notification_id):
 def tick():
     now = timezone.now()
     local_today = timezone.localdate(now)
-    for t in Task.objects.filter(deleted=False, project__archived=False, assignee__is_active=True,
+    for t in Task.objects.not_archived().filter(deleted=False, assignee__is_active=True,
             due_date__range=(local_today - timedelta(days=7), local_today + timedelta(days=1))).exclude(status="done"):
         due = datetime.combine(t.due_date, t.due_time or time(9), ZoneInfo(settings.TIME_ZONE))
         left = (due - now).total_seconds()

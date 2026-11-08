@@ -42,9 +42,11 @@ def validated_comment(data):
 
 @transaction.atomic
 def add_comment(task_id, user, data):
-    body, mentions = validated_comment(data)
     # Serialize with task edits/deletion; the comment and all notices commit together.
-    task = Task.objects.select_for_update().get(id=task_id, deleted=False, project__archived=False)
+    task = Task.objects.visible_to(user).not_archived().select_for_update().get(id=task_id, deleted=False)
+    body, mentions = validated_comment(data)
+    if task.project_id is None and mentions:
+        raise Problem("Privát teendőnél nem lehet csapattagot megemlíteni.")
     comment = Comment.objects.create(task=task, user=user, body=body, mentions=mentions)
     mentioned = {span["user_id"] for span in mentions}
     participants = {task.created_by_id, task.assignee_id} | set(task.comments.values_list("user_id", flat=True))

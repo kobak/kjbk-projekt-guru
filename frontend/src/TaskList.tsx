@@ -226,7 +226,11 @@ export default function TaskList({
               </div>
               <button
                 className="table-project"
-                onClick={() => onProject(task.project_id)}
+                onClick={() =>
+                  task.project_id === null
+                    ? onOpen(task)
+                    : onProject(task.project_id)
+                }
               >
                 <i
                   style={{
@@ -237,11 +241,11 @@ export default function TaskList({
                     ),
                   }}
                 />
-                {
-                  data.projects.find(
-                    (project) => project.id === task.project_id,
-                  )?.name
-                }
+                {task.project_id === null
+                  ? "Privát teendő"
+                  : data.projects.find(
+                      (project) => project.id === task.project_id,
+                    )?.name}
               </button>
               <span
                 className={"table-date " + (isOverdue(task) ? "overdue" : "")}

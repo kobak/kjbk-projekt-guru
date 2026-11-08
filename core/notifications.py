@@ -64,7 +64,7 @@ def notification_is_relevant(notification):
     task = notification.task
     if not task:
         return False
-    if task.deleted or task.project.archived:
+    if task.deleted or task.project_archived or (task.project_id is None and task.created_by_id != notification.user_id):
         return False
     if notification.kind in ("task_assigned", "task_updated", "due", "overdue") and task.assignee_id != notification.user_id:
         return False
@@ -83,7 +83,7 @@ def notification_email(notification):
         "name": notification.user.first_name or notification.user.email,
         "title": notification.title,
         "task_title": notification.body,
-        "project_name": task.project.name,
+        "project_name": task.project_name,
         "due_date": task.due_date,
         "due_time": task.due_time,
         "task_url": f"{settings.APP_URL}/?task={task.id}",

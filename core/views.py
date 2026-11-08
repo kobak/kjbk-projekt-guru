@@ -13,6 +13,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.db import transaction
+from django.db.models import Q
 from django.http import JsonResponse, HttpResponse, FileResponse
 from django.http.response import HttpResponseBase
 from django.middleware.csrf import get_token
@@ -112,7 +113,10 @@ def profile(request):
 @api()
 def bootstrap(request):
     ws = Workspace.objects.first()
-    tasks = task_queryset().order_by("position", "-created_at")
+    tasks = task_queryset(request.user).order_by("position", "-created_at")
+    activity_feed = Activity.objects.filter(
+        Q(task_id__isnull=True) | Q(task_id__in=Task.objects.visible_to(request.user))
+    ).select_related("user", "task")
     return {"workspace": ws.name if ws else "Közös munkatér", "user": person(request.user),
         "appearance": appearance_json(request.user),
         "list_order": list_order_json(request.user),
@@ -124,7 +128,7 @@ def bootstrap(request):
         "unread": Notification.objects.filter(user=request.user, read=False).count(),
         "activity": [{"id": a.id, "user": person(a.user), "text": a.text,
             "task_id": str(a.task_id) if a.task_id else None, "task_title": a.task.title if a.task else "",
-            "created_at": a.created_at.isoformat()} for a in Activity.objects.select_related("user", "task")[:15]],
+            "created_at": a.created_at.isoformat()} for a in activity_feed[:15]],
         "integrations": integration_state(request.user)}
 
 def integration_state(user):
@@ -162,7 +166,7 @@ def projects(request, project_id=None):
 @api(("POST",))
 def create_task(request):
     t = save_task(request.data, request.user)
-    return {"task": task_json(task_queryset().get(id=t.id), request.user, True)}
+    return {"task": task_json(task_queryset(request.user).get(id=t.id), request.user, True)}
 
 @api(("GET", "PATCH", "DELETE"))
 def task(request, task_id):
@@ -171,7 +175,7 @@ def task(request, task_id):
     elif request.method == "DELETE":
         delete_task(task_id, request.data.get("version"), request.user)
         return {"ok": True}
-    return {"task": task_json(get_object_or_404(task_queryset(), id=task_id), request.user, True)}
+    return {"task": task_json(task_queryset(request.user).get(id=task_id), request.user, True)}
 
 @api(("POST",))
 def comments(request, task_id):
@@ -180,7 +184,7 @@ def comments(request, task_id):
 
 @api(("POST", "PATCH", "DELETE"))
 def checklist(request, task_id, item_id=None):
-    t = get_object_or_404(Task, id=task_id, deleted=False, project__archived=False)
+    t = get_object_or_404(Task.objects.visible_to(request.user).not_archived(), id=task_id, deleted=False)
     if request.method == "POST":
         ChecklistItem.objects.create(task=t, text=text(request.data, "text", 250, True))
     else:
@@ -199,7 +203,7 @@ def checklist(request, task_id, item_id=None):
 
 @api(("POST",))
 def attachments(request, task_id):
-    t = get_object_or_404(Task, id=task_id, deleted=False, project__archived=False)
+    t = get_object_or_404(Task.objects.visible_to(request.user).not_archived(), id=task_id, deleted=False)
     f = request.FILES.get("file")
     if not f or f.size > settings.MAX_UPLOAD_BYTES:
         raise Problem("Válassz legfeljebb 25 MB méretű fájlt.")
@@ -219,9 +223,10 @@ def drive_attachment(request, task_id):
 
 @api(("GET", "DELETE"))
 def attachment(request, attachment_id):
-    a = get_object_or_404(Attachment, id=attachment_id, task__deleted=False)
+    a = get_object_or_404(Attachment.objects.select_related("task__project"),
+        id=attachment_id, task_id__in=Task.objects.visible_to(request.user).filter(deleted=False))
     if request.method == "DELETE":
-        if a.task.project.archived:
+        if a.task.project_archived:
             raise Problem("Az archivált projekt fájljai csak olvashatók.")
         if a.user_id != request.user.id and not request.user.is_staff:
             raise Problem("Csak a csatoló vagy az adminisztrátor távolíthatja el a csatolmányt.", 403)
@@ -413,7 +418,7 @@ def mcp_connections(request):
 
 @api(("POST", "DELETE"))
 def task_calendar(request, task_id):
-    t = get_object_or_404(Task, id=task_id, deleted=False)
+    t = get_object_or_404(Task.objects.visible_to(request.user), id=task_id, deleted=False)
     if not GoogleConnection.objects.filter(user=request.user).exists():
         raise Problem("Előbb csatlakoztasd a saját Google Naptáradat a Beállításokban.")
     if request.method == "POST" and not t.due_date:
@@ -425,11 +430,11 @@ def task_calendar(request, task_id):
     link.save()
     success = sync_link(link.id)
     link.refresh_from_db()
-    return {"ok": success, "error": link.error, "task": task_json(task_queryset().get(id=t.id), request.user, True)}
+    return {"ok": success, "error": link.error, "task": task_json(task_queryset(request.user).get(id=t.id), request.user, True)}
 
 @api()
 def task_calendar_file(request, task_id):
-    t = get_object_or_404(Task.objects.select_related("project"), id=task_id, deleted=False)
+    t = get_object_or_404(Task.objects.visible_to(request.user).select_related("project"), id=task_id, deleted=False)
     response = HttpResponse(calendar_file(t), content_type="text/calendar; charset=utf-8")
     response["Content-Disposition"] = 'attachment; filename="kozos-feladat.ics"'
     return response

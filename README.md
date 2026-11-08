@@ -20,6 +20,7 @@ Magyar nyelvű, saját szerveren futtatható projektkezelő 3–5 fős csapatokn
 - [Hírsáv](docs/announcements.md) a kezdőlapon, admin szerkesztővel és élő előnézettel. Egy kiemelt hír, opcionális linkgomb, fiókonként mentett elrejtés; weben és Mac-en egyaránt.
 - Projektáttekintő, Kanban, lista, havi csapatnaptár és mobilos napi lista.
 - Feladatok felelőssel, prioritással, címkékkel, dátumos vagy pontos határidővel; részfeladatok, hozzászólások és legfeljebb 25 MB-os csatolmányok.
+- Az új feladatnál a **Nincs projekt (privát)** opció saját teendőt hoz létre. A **Saját feladatok** nézetben jelenik meg, és csak a létrehozó fiókja fér hozzá.
 - Mindig hétfővel kezdődő magyar dátumválasztó. A feladat részletei alatt közvetlenül látható hozzászólások, csapattagválasztós @említésekkel.
 - Készre jelölés után 5 másodperces Visszavonás, amely az előző állapotot állítja vissza és védi a közben történt módosításokat.
 - Google Drive-fájlválasztó: mindenki a saját Google-fiókjából csatolhat fájlhivatkozást, külön feltöltés nélkül. A hozzáférést továbbra is a Drive szabályozza; a GURU-ba csak a név és a hivatkozás kerül.
@@ -89,7 +90,7 @@ npm --prefix frontend run build
 npm --prefix frontend test
 ```
 
-A backendteszt-csomag 149 ellenőrzést tartalmaz, köztük az adminisztrátori e-mail-javítás, a személyes nézetbeállítások, a kézi sorrend, a készre jelölés visszavonása és a Drive-csatolás jogosultsági próbáit. Tizenegy frontendteszt vizsgálja a rendezést és az említéseket. A GitHub Actions a tiszta telepítést, frontend-buildet, SQLite/PostgreSQL/MariaDB teszteket és a Docker-buildet ellenőrzi. A külső Google-, SMTP- és push-küldést a tesztek helyettesítik; tesztfutás közben valódi címzettnek nem küldenek üzenetet.
+A backendteszt-csomag 154 ellenőrzést tartalmaz, köztük az adminisztrátori e-mail-javítás, a személyes nézetbeállítások, a kézi sorrend, a készre jelölés visszavonása, a Drive-csatolás és a privát teendők jogosultsági próbáit. Tizenegy frontendteszt vizsgálja a rendezést és az említéseket. A GitHub Actions a tiszta telepítést, frontend-buildet, SQLite/PostgreSQL/MariaDB teszteket és a Docker-buildet ellenőrzi. A külső Google-, SMTP- és push-küldést a tesztek helyettesítik; tesztfutás közben valódi címzettnek nem küldenek üzenetet.
 
 Az asztali és 390 px széles mobilnézet böngészős próbán is átesett. A `theme-init.js` szinkron betöltése miatti Vite-figyelmeztetés szándékos: ez alkalmazza a választott témát az első kirajzolás előtt; a fájl a buildben is szerepel.
 
