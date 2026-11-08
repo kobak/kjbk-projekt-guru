@@ -65,6 +65,8 @@ export type Task = {
     size: number;
     url: string;
     kind: "file" | "drive";
+    added_by: string;
+    created_at: string;
     can_delete: boolean;
   }[];
 };

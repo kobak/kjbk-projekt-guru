@@ -20,6 +20,12 @@ import CommentComposer from "./CommentComposer";
 import type { Mention } from "./mentions";
 import DriveAttachment from "./DriveAttachment";
 
+const attachmentDate = new Intl.DateTimeFormat("hu-HU", {
+  dateStyle: "medium",
+  timeStyle: "short",
+  timeZone: "Europe/Budapest",
+});
+
 type Props = {
   id: string | null;
   initialProject?: string;
@@ -746,6 +752,13 @@ export default function TaskPanel({
                         : a.size < 1024 * 1024
                           ? `${Math.ceil(a.size / 1024)} KB`
                           : `${(a.size / 1024 / 1024).toFixed(1)} MB`}
+                    </span>
+                    <span className="attachment-meta">
+                      {a.kind === "drive" ? "Csatolta" : "Feltöltötte"}:{" "}
+                      {a.added_by} ·{" "}
+                      <time dateTime={a.created_at}>
+                        {attachmentDate.format(new Date(a.created_at))}
+                      </time>
                     </span>
                   </a>
                   {a.can_delete && (
