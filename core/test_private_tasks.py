@@ -52,7 +52,9 @@ class PrivateTaskTests(TestCase):
 
     @override_settings(GOOGLE_PICKER_CLIENT_ID="test", GOOGLE_PICKER_API_KEY="test", GOOGLE_PICKER_APP_ID="1")
     def test_admin_cannot_use_direct_task_or_related_endpoints(self):
-        self.assertEqual(self.other.get(self.url).status_code, 404)
+        response = self.other.get(self.url)
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json()["error"], "A kért adat nem található.")
         for method, suffix, data in [
             ("patch", "", {"version": 1, "title": "Módosítva"}),
             ("delete", "", {"version": 1}),

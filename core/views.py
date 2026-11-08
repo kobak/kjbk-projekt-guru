@@ -175,7 +175,7 @@ def task(request, task_id):
     elif request.method == "DELETE":
         delete_task(task_id, request.data.get("version"), request.user)
         return {"ok": True}
-    return {"task": task_json(get_object_or_404(task_queryset(request.user), id=task_id), request.user, True)}
+    return {"task": task_json(task_queryset(request.user).get(id=task_id), request.user, True)}
 
 @api(("POST",))
 def comments(request, task_id):
