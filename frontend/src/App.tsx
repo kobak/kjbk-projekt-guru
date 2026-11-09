@@ -443,7 +443,11 @@ export default function App() {
           ),
         },
     );
-  const completedToast = (saved: Task, previous: Status) => {
+  const completedToast = (
+    saved: Task,
+    previous: Status,
+    onUndo?: (task: Task) => void,
+  ) => {
     showToast("Még egy lépéssel előrébb. Kész!", {
       label: "Visszavonás",
       perform: async () => {
@@ -455,6 +459,7 @@ export default function App() {
             { status: previous, version: saved.version },
           );
           applySavedTask(task);
+          onUndo?.(task);
           reload().catch(() => {});
           return "Készre jelölés visszavonva";
         } catch (error) {

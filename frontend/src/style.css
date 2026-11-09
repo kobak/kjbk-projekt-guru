@@ -2081,6 +2081,14 @@ input[type="checkbox"] {
   color: var(--accent-foreground);
   font-weight: 600;
 }
+.task-tabs > .task-completion {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  color: var(--accent-foreground);
+  font-weight: 600;
+}
 .modal > .error-banner {
   margin: 18px 26px 0;
 }
