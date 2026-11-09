@@ -11,6 +11,7 @@ import {
   LoaderCircle,
   Circle,
   HardDrive,
+  Undo2,
 } from "lucide-react";
 import type { Bootstrap, Task, Status } from "./types";
 import { api, ApiError, dayLabel, relative } from "./api";
@@ -35,7 +36,11 @@ type Props = {
   onClose: () => void;
   onSaved: () => Promise<void>;
   toast: (s: string) => void;
-  onCompleted: (task: Task, previous: Status) => void;
+  onCompleted: (
+    task: Task,
+    previous: Status,
+    onUndo?: (task: Task) => void,
+  ) => void;
 };
 export default function TaskPanel({
   id,
@@ -167,6 +172,34 @@ export default function TaskPanel({
     }
   };
   const archived = data.projects.find((p) => p.id === project)?.archived;
+  const applyQuickStatus = (updated: Task) => {
+    setTask(updated);
+    setStatus(updated.status);
+    setEditVersion(updated.version);
+  };
+  const toggleComplete = async () => {
+    if (!task || busy || archived || conflict) return;
+    const previous = task.status;
+    const status = previous === "done" ? "todo" : "done";
+    setBusy(true);
+    setError("");
+    try {
+      const { task: updated } = await api<{ task: Task }>(
+        `tasks/${task.id}/`,
+        "PATCH",
+        { status, version: editVersion },
+      );
+      applyQuickStatus(updated);
+      if (status === "done") onCompleted(updated, previous, applyQuickStatus);
+      else toast("Feladat újranyitva");
+      await onSaved().catch(() => {});
+    } catch (e) {
+      setError((e as Error).message);
+      if (e instanceof ApiError && e.status === 409) setConflict(true);
+    } finally {
+      setBusy(false);
+    }
+  };
   const closeEditor = () => {
     const changed = task
       ? title !== task.title ||
@@ -216,6 +249,21 @@ export default function TaskPanel({
               Fájlok{" "}
               {task?.attachment_count ? `(${task.attachment_count})` : ""}
             </button>
+            {task && !archived && (
+              <button
+                type="button"
+                className="task-completion"
+                onClick={toggleComplete}
+                disabled={busy || conflict}
+              >
+                {task.status === "done" ? (
+                  <Undo2 size={16} />
+                ) : (
+                  <Check size={16} />
+                )}
+                {task.status === "done" ? "Újranyitás" : "Készre jelölés"}
+              </button>
+            )}
           </div>
           {error && (
             <div className="error-banner" role="alert">
