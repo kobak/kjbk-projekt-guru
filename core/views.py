@@ -22,7 +22,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
 from .models import Workspace, Project, Task, ChecklistItem, Attachment, Notification, Activity, Invite, PushSubscription, GoogleConnection, CalendarLink
 from .services import Problem, person, project_json, task_json, task_queryset, text, password_text, save_project, save_task, delete_task, activity
-from .calendar import SCOPE, cipher, sync_link, calendar_file
+from .calendar import SCOPE, cipher, sync_link, calendar_file, legacy_calendar_matches
 from .announcements import announcement_json, visible_announcement, save_announcement, set_publication, dismiss_announcement
 from .notifications import preference_json, save_preferences, email_configured
 from .appearance import appearance_json, save_appearance
@@ -89,6 +89,10 @@ def login(request):
 
 @api(("POST",))
 def logout(request):
+    endpoint = request.data.get("push_endpoint")
+    if isinstance(endpoint, str) and 0 < len(endpoint) <= 2000:
+        PushSubscription.objects.filter(user=request.user,
+            endpoint_hash=hashlib.sha256(endpoint.encode()).hexdigest()).delete()
     auth_logout(request)
     return {"ok": True}
 
@@ -322,16 +326,27 @@ def invites(request):
     Invite.objects.create(email=email, token_hash=hashlib.sha256(raw.encode()).hexdigest(), created_by=request.user, expires_at=timezone.now() + timedelta(days=7))
     return {"url": settings.APP_URL + "/?invite=" + raw, "email": email}
 
+def active_invites(token):
+    return Invite.objects.filter(token_hash=hashlib.sha256(token.encode()).hexdigest(),
+        accepted_at=None, expires_at__gt=timezone.now())
+
+@api(("POST",), anonymous=True)
+def check_invite(request):
+    invite = get_object_or_404(active_invites(text(request.data, "token", 128, True)))
+    return {"email": invite.email}
+
 @api(("GET", "POST"), anonymous=True)
-def accept_invite(request, token):
-    invite = get_object_or_404(Invite, token_hash=hashlib.sha256(token.encode()).hexdigest(), accepted_at=None, expires_at__gt=timezone.now())
+def accept_invite(request, token=None):
+    # Older cached clients still use the path parameter. New clients send it
+    # in the body, keeping it out of the URL.
     if request.method == "GET":
-        return {"email": invite.email}
+        if token is None:
+            return JsonResponse({"error": "Nem támogatott metódus."}, status=405)
+        return {"email": get_object_or_404(active_invites(token)).email}
+    invites = active_invites(token if token is not None else text(request.data, "token", 128, True))
     with transaction.atomic():
         Workspace.objects.select_for_update().get_or_create(id=1)
-        invite = Invite.objects.select_for_update().get(id=invite.id)
-        if invite.accepted_at:
-            raise Problem("Ezt a meghívót már felhasználták.")
+        invite = get_object_or_404(invites.select_for_update())
         if User.objects.filter(is_active=True).count() >= settings.MAX_MEMBERS:
             raise Problem("A munkatér betelt.")
         if User.objects.filter(username=invite.email, is_active=True).exists():
@@ -375,7 +390,8 @@ def google_start(request):
     state = secrets.token_urlsafe(32)
     request.session["google_state"] = {"value": state, "time": timezone.now().timestamp()}
     params = {"client_id": settings.GOOGLE_CLIENT_ID, "redirect_uri": settings.APP_URL + "/api/google/callback/",
-        "response_type": "code", "scope": SCOPE, "access_type": "offline", "prompt": "consent", "state": state}
+        "response_type": "code", "scope": f"openid {SCOPE}", "access_type": "offline",
+        "prompt": "consent select_account", "state": state}
     return redirect("https://accounts.google.com/o/oauth2/v2/auth?" + urlencode(params))
 
 @login_required
@@ -390,44 +406,86 @@ def google_callback(request):
             "client_id": settings.GOOGLE_CLIENT_ID, "client_secret": settings.GOOGLE_CLIENT_SECRET,
             "redirect_uri": settings.APP_URL + "/api/google/callback/", "grant_type": "authorization_code"}, timeout=15)
         result = response.json()
-        if response.status_code != 200 or not result.get("refresh_token") or SCOPE not in result.get("scope", "").split():
+        if (response.status_code != 200 or not isinstance(result, dict)
+                or not result.get("access_token") or not result.get("refresh_token")
+                or SCOPE not in result.get("scope", "").split()):
             return redirect("/?settings=1&google=error")
-        GoogleConnection.objects.update_or_create(user=request.user, defaults={"encrypted_refresh_token": cipher().encrypt(result["refresh_token"].encode()).decode(), "error": ""})
-        CalendarLink.objects.filter(user=request.user).update(attempted_at=None)
+        headers = {"Authorization": f"Bearer {result['access_token']}"}
+        identity = requests.get("https://openidconnect.googleapis.com/v1/userinfo", headers=headers, timeout=10)
+        profile = identity.json() if identity.status_code == 200 else {}
+        subject = profile.get("sub") if isinstance(profile, dict) else None
+        if not isinstance(subject, str) or not 0 < len(subject) <= 255:
+            return redirect("/?settings=1&google=error")
+        with transaction.atomic():
+            User.objects.select_for_update().get(pk=request.user.pk)
+            connection = GoogleConnection.objects.select_for_update().filter(user=request.user).first()
+            links = CalendarLink.objects.filter(user=request.user)
+            existing_events = links.exclude(event_id="")
+            old_subject = connection.google_subject if connection else ""
+            if old_subject != subject:
+                if existing_events.exists():
+                    if old_subject:
+                        return redirect("/?settings=1&google=account_mismatch")
+                    if not legacy_calendar_matches(existing_events, headers):
+                        return redirect("/?settings=1&google=account_unverified")
+                else:
+                    # The old account's unsynced adds should not run under a new identity.
+                    links.filter(enabled=True).update(enabled=False, error="")
+            GoogleConnection.objects.update_or_create(user=request.user, defaults={
+                "encrypted_refresh_token": cipher().encrypt(result["refresh_token"].encode()).decode(),
+                "google_subject": subject, "error": "",
+            })
+            links.update(attempted_at=None)
         return redirect("/?settings=1&google=connected")
     except (requests.RequestException, ValueError):
         return redirect("/?settings=1&google=error")
 
 @api(("POST",))
+@transaction.atomic
 def google_disconnect(request):
+    User.objects.select_for_update().get(pk=request.user.pk)
+    connection = GoogleConnection.objects.select_for_update().filter(user=request.user).first()
     if CalendarLink.objects.filter(user=request.user).exclude(event_id="").exists():
         raise Problem("Előbb távolítsd el a naptárból a hozzáadott feladatokat. Így nem maradnak hátra események.")
-    GoogleConnection.objects.filter(user=request.user).delete()
+    CalendarLink.objects.filter(user=request.user, enabled=True).update(enabled=False, error="")
+    if connection:
+        connection.delete()
     return {"ok": True}
 
 @api(("GET", "DELETE"))
 def mcp_connections(request):
-    from oauth2_provider.models import Application, AccessToken, RefreshToken
+    from oauth2_provider.models import Application, AccessToken, RefreshToken, refresh_token_expire_timedelta
     if request.method == "DELETE":
         app_id = request.data.get("id")
-        RefreshToken.objects.filter(user=request.user, application_id=app_id).delete()
-        AccessToken.objects.filter(user=request.user, application_id=app_id).delete()
+        if type(app_id) is not int or app_id < 1:
+            raise Problem("Érvénytelen MCP-kapcsolat.")
+        with transaction.atomic():
+            User.objects.select_for_update().get(pk=request.user.pk)
+            RefreshToken.objects.filter(user=request.user, application_id=app_id).delete()
+            AccessToken.objects.filter(user=request.user, application_id=app_id).delete()
         return {"ok": True}
-    ids = AccessToken.objects.filter(user=request.user, expires__gt=timezone.now()).values_list("application_id", flat=True)
-    return {"connections": [{"id": a.id, "name": a.name} for a in Application.objects.filter(id__in=ids)]}
+    now = timezone.now()
+    access = AccessToken.objects.filter(user=request.user, expires__gt=now)
+    refresh = RefreshToken.objects.filter(user=request.user, revoked__isnull=True, access_token__isnull=False)
+    lifetime = refresh_token_expire_timedelta()
+    if lifetime:
+        refresh = refresh.filter(access_token__expires__gt=now - lifetime)
+    apps = Application.objects.filter(
+        Q(pk__in=access.values("application_id")) | Q(pk__in=refresh.values("application_id")),
+    ).order_by("name", "pk")
+    return {"connections": list(apps.values("id", "name"))}
 
 @api(("POST", "DELETE"))
 def task_calendar(request, task_id):
     t = get_object_or_404(Task.objects.visible_to(request.user), id=task_id, deleted=False)
-    if not GoogleConnection.objects.filter(user=request.user).exists():
-        raise Problem("Előbb csatlakoztasd a saját Google Naptáradat a Beállításokban.")
     if request.method == "POST" and not t.due_date:
         raise Problem("Előbb adj meg határidőt.")
-    link, _ = CalendarLink.objects.get_or_create(task=t, user=request.user)
-    link.enabled = request.method == "POST"
-    link.attempted_at = None
-    link.synced_version = 0
-    link.save()
+    with transaction.atomic():
+        if not GoogleConnection.objects.select_for_update().filter(user=request.user).first():
+            raise Problem("Előbb csatlakoztasd a saját Google Naptáradat a Beállításokban.")
+        link, _ = CalendarLink.objects.update_or_create(task=t, user=request.user, defaults={
+            "enabled": request.method == "POST", "attempted_at": None, "synced_version": 0,
+        })
     success = sync_link(link.id)
     link.refresh_from_db()
     return {"ok": success, "error": link.error, "task": task_json(task_queryset(request.user).get(id=t.id), request.user, True)}
@@ -452,6 +510,8 @@ def spa(request, path=""):
         # Restricted Picker keys need the app's origin as the cross-origin referrer.
         # Never send task paths or query parameters to Google.
         response["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    if "invite" in request.GET:
+        response["Referrer-Policy"] = "no-referrer"
     return response
 
 def health(request):

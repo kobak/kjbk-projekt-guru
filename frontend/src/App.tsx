@@ -73,6 +73,26 @@ type ToastMessage = {
   busy?: boolean;
 };
 
+async function pushSubscriptionForLogout(): Promise<PushSubscription | undefined> {
+  if (!("serviceWorker" in navigator)) return;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      (async () => {
+        const registration = await navigator.serviceWorker.getRegistration("/");
+        return (await registration?.pushManager?.getSubscription()) ?? undefined;
+      })(),
+      new Promise<undefined>((resolve) => {
+        timer = setTimeout(resolve, 1000);
+      }),
+    ]);
+  } catch {
+    return undefined;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 function Login({ onLogin }: { onLogin: () => void }) {
   const token = new URLSearchParams(location.search).get("invite");
   const [email, setEmail] = useState(""),
@@ -83,7 +103,7 @@ function Login({ onLogin }: { onLogin: () => void }) {
     [validInvite, setValidInvite] = useState(!token);
   useEffect(() => {
     if (token)
-      api<{ email: string }>(`invites/${token}/`)
+      api<{ email: string }>("invite/check/", "POST", { token })
         .then((r) => {
           setEmail(r.email);
           setValidInvite(true);
@@ -151,9 +171,9 @@ function Login({ onLogin }: { onLogin: () => void }) {
               setError("");
               try {
                 await api(
-                  token ? `invites/${token}/` : "login/",
+                  token ? "invite/accept/" : "login/",
                   "POST",
-                  token ? { name, password } : { email, password },
+                  token ? { token, name, password } : { email, password },
                 );
                 if (token) history.replaceState(null, "", "/");
                 onLogin();
@@ -1715,22 +1735,16 @@ export default function App() {
           toast={showToast}
           onLogout={async () => {
             try {
-              if ("serviceWorker" in navigator) {
-                const reg = await navigator.serviceWorker.getRegistration("/");
-                const sub = await reg?.pushManager?.getSubscription();
-                if (sub) {
-                  await api("push/", "DELETE", sub.toJSON());
-                  await sub.unsubscribe();
-                }
-              }
-              await api("logout/", "POST");
+              const sub = await pushSubscriptionForLogout();
+              await api("logout/", "POST", { push_endpoint: sub?.endpoint });
+              void Promise.resolve().then(() => sub?.unsubscribe()).catch(() => {});
               bootstrapSequence.current++;
               resetAppearance();
               setSettingsOpen(false);
               setTaskEditor(null);
               setData(null);
               setSession(null);
-              await api("session/");
+              await loadSession();
             } catch (e) {
               showToast((e as Error).message);
             }

@@ -1,5 +1,12 @@
 # Változásnapló
 
+## Következő kiadás
+
+- A Kapcsolatok alatt a még megújítható MCP-hozzáférés akkor is látszik és visszavonható, ha az aktuális hozzáférési token már lejárt.
+- A Google Naptár fiókválasztót nyit. Ha a korábbi naptárhoz még tartoznak GURU-események, csak ugyanahhoz a fiókhoz lehet újracsatlakozni. A `0010_google_connection_subject` migráció megőrzi a régi kapcsolatokat.
+- A határidős események az óraátállításkor is 30 percig tartanak a Google Naptárban és az exportban. Archivált projektből nem lehet feladatot áthelyezni.
+- A push hibája esetén is ki lehet jelentkezni. A meghívók kódja nem kerül az API útvonalába; a korábbi kliensek útvonalát a mellékelt Apache- és Gunicorn-beállítás elfedi a hozzáférési naplóban.
+
 ## 1.5.0 — 2026-11-02
 
 - Rövid hírsáv a kezdőlap köszöntése és az Új feladat gomb között, mobilon alájuk rendezve. Weben és a meglévő Mac-appban is működik.

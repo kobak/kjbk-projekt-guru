@@ -16,4 +16,4 @@ RUN mkdir -p /app/media /app/staticfiles && chown -R kozos:kozos /app/media /app
 USER kozos
 EXPOSE 8000
 ENTRYPOINT ["sh", "/app/deploy/entrypoint.sh"]
-CMD ["gunicorn", "config.wsgi:application", "--no-control-socket", "--bind", "0.0.0.0:8000", "--workers", "2", "--threads", "4", "--timeout", "60", "--access-logfile", "-", "--access-logformat", "%(m)s %(U)s %(s)s"]
+CMD ["gunicorn", "config.wsgi:application", "--no-control-socket", "--bind", "0.0.0.0:8000", "--workers", "2", "--threads", "4", "--timeout", "60", "--logger-class", "config.access_log.GuruLogger", "--access-logfile", "-", "--access-logformat", "%(m)s %(U)s %(s)s"]

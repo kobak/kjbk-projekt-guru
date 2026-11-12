@@ -220,6 +220,7 @@ class PushSubscription(models.Model):
 class GoogleConnection(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     encrypted_refresh_token = models.TextField()
+    google_subject = models.CharField(max_length=255, blank=True, db_default="")
     connected_at = models.DateTimeField(auto_now_add=True)
     error = models.CharField(max_length=250, blank=True)
 
