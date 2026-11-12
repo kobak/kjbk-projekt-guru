@@ -258,6 +258,55 @@ class AppTests(TestCase):
         r=self.client.get("/oauth/authorize/?resource=https://wrong.example")
         self.assertEqual(r.status_code,400)
 
+    @override_settings(OAUTH2_PROVIDER={**settings.OAUTH2_PROVIDER, "ALLOWED_REDIRECT_URI_SCHEMES": ["https"]})
+    def test_native_loopback_oauth_works_with_https_only_default(self):
+        registered_uri = "http://127.0.0.1:49152/callback"
+        callback_uri = "http://127.0.0.1:49153/callback"
+        native = Client()
+        registration = self.post("/oauth/register/", {
+            "client_name": "Native test client", "redirect_uris": [registered_uri],
+        }, client=native)
+        self.assertEqual(registration.status_code, 201)
+        verifier = "v" * 64
+        challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).decode().rstrip("=")
+        params = {
+            "client_id": registration.json()["client_id"], "redirect_uri": callback_uri,
+            "response_type": "code", "scope": "tasks:read", "state": "loopback-state",
+            "code_challenge": challenge, "code_challenge_method": "S256", "resource": settings.APP_URL + "/mcp",
+        }
+        consent_url = "/oauth/authorize/?" + urlencode(params)
+        self.assertEqual(self.client.get(consent_url).status_code, 200)
+        response = self.client.post(consent_url, {**params, "allow": "Authorize"})
+        self.assertEqual(response.status_code, 302)
+        location = urlparse(response["Location"])
+        self.assertEqual(location._replace(query="").geturl(), callback_uri)
+        fields = parse_qs(location.query)
+        self.assertEqual(fields.get("iss"), [settings.APP_URL])
+        self.assertEqual(fields.get("state"), ["loopback-state"])
+        exchange = {
+            "grant_type": "authorization_code", "client_id": params["client_id"],
+            "redirect_uri": callback_uri, "code": fields["code"][0], "resource": params["resource"],
+        }
+        self.assertEqual(native.post("/oauth/token/", urlencode({**exchange, "code_verifier": "w" * 64}),
+            content_type="application/x-www-form-urlencoded").status_code, 400)
+        token = native.post("/oauth/token/", urlencode({**exchange, "code_verifier": verifier}),
+            content_type="application/x-www-form-urlencoded")
+        self.assertEqual(token.status_code, 200)
+        tools = self.rpc("tools/list", headers={"HTTP_AUTHORIZATION": "Bearer " + token.json()["access_token"]})
+        self.assertEqual(tools.status_code, 200)
+
+    def test_oauth_rejects_non_loopback_http_registration(self):
+        for uri in ("http://client.example/callback", "http://localhost.example/callback", "http://127.0.0.1:99999/callback"):
+            with self.subTest(uri=uri):
+                response = self.post("/oauth/register/", {"redirect_uris": [uri]}, client=Client())
+                self.assertEqual(response.status_code, 400)
+
+    def test_oauth_denial_rejects_unregistered_callback(self):
+        params = {**self.oauth_params(), "redirect_uri": "http://127.0.0.1:49152/callback"}
+        response = self.client.post("/oauth/authorize/", params)
+        self.assertEqual(response.status_code, 400)
+        self.assertNotIn("Location", response)
+
     def oauth_params(self):
         app=Application.objects.create(name="Issuer regression",client_type=Application.CLIENT_PUBLIC,
             authorization_grant_type=Application.GRANT_AUTHORIZATION_CODE,
