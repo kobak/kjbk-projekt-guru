@@ -9,6 +9,7 @@ from oauth2_provider.models import Application, AccessToken
 from django.utils import timezone
 from django.core.exceptions import ValidationError as DjangoValidationError
 from .models import Project, Task
+from .oauth import is_loopback_callback
 from .services import Problem, person, project_json, task_json, task_queryset, save_project, save_task, text
 
 PROTOCOL = "2025-06-18"
@@ -41,7 +42,7 @@ def register(request):
             raise ValueError()
         for uri in uris:
             u = urlparse(uri)
-            if len(uri) > 1000 or u.fragment or u.username or u.password or not u.hostname or (u.scheme != "https" and not (u.scheme == "http" and u.hostname in ("localhost", "127.0.0.1", "::1"))):
+            if len(uri) > 1000 or u.fragment or u.username or u.password or not u.hostname or (u.scheme != "https" and not is_loopback_callback(uri)):
                 raise ValueError()
         if data.get("token_endpoint_auth_method", "none") != "none" or data.get("grant_types", ["authorization_code"]) not in (["authorization_code"], ["authorization_code", "refresh_token"]):
             return JsonResponse({"error": "invalid_client_metadata"}, status=400)
