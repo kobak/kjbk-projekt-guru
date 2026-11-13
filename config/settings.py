@@ -100,6 +100,7 @@ EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "false").lower() == "true"
 EMAIL_TIMEOUT = 10
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "")
 OAUTH2_PROVIDER = {
+    "OAUTH2_VALIDATOR_CLASS": "core.oauth.MCPOAuthValidator",
     # Match root discovery; do not infer a different issuer from the /oauth/ mount.
     "OIDC_ISS_ENDPOINT": APP_URL,
     "SCOPES": {"tasks:read": "Közös projektek és feladatok olvasása", "tasks:write": "Projektek és feladatok szerkesztése"},

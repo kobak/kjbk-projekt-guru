@@ -10,5 +10,7 @@
     RewriteCond %{REQUEST_URI} !^/\.well-known/acme-challenge/
     RewriteRule ^ https://projekt.sajatdomain.hu%{REQUEST_URI} [END,NE,R=301]
     ErrorLog ${APACHE_LOG_DIR}/kozos-error.log
-    CustomLog ${APACHE_LOG_DIR}/kozos-access.log "%h %l %u %t \"%m %U %H\" %>s %b"
+    SetEnvIf Request_URI "^/api/invites/.+" guru_legacy_invite
+    CustomLog ${APACHE_LOG_DIR}/kozos-access.log "%h %l %u %t \"%m %U %H\" %>s %b" env=!guru_legacy_invite
+    CustomLog ${APACHE_LOG_DIR}/kozos-access.log "%h %l %u %t \"%m /api/invites/[redacted] %H\" %>s %b" env=guru_legacy_invite
 </VirtualHost>

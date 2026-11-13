@@ -1,7 +1,7 @@
 import base64
 import hashlib
 import uuid
-from datetime import datetime, timedelta, time
+from datetime import datetime, timedelta
 from urllib.parse import quote
 from urllib.parse import urlencode, urlparse
 from datetime import timezone as dt_timezone
@@ -15,9 +15,34 @@ from .models import CalendarLink, GoogleConnection
 from .services import Problem
 
 SCOPE = "https://www.googleapis.com/auth/calendar.events.owned"
+PRIMARY_EVENTS = "https://www.googleapis.com/calendar/v3/calendars/primary/events"
 
 def cipher():
     return Fernet(base64.urlsafe_b64encode(hashlib.sha256((settings.SECRET_KEY + ":calendar").encode()).digest()))
+
+def event_url(event_id):
+    return PRIMARY_EVENTS + "/" + quote(event_id, safe="")
+
+def legacy_calendar_matches(links, headers):
+    # A previously synchronized GURU event in the new credential's primary
+    # calendar proves continuity without asking for broader Calendar access.
+    recent = links.order_by("-synced_version", "-attempted_at", "pk").values_list("event_id", "task_id")[:3]
+    for event_id, task_id in recent:
+        response = requests.get(event_url(event_id), headers=headers, timeout=5,
+            params={"fields": "status,organizer(self),extendedProperties/private"})
+        if response.status_code == 200:
+            event = response.json()
+            if (event.get("status") != "cancelled" and event.get("organizer", {}).get("self")
+                    and event.get("extendedProperties", {}).get("private", {}).get("kozos_task") == str(task_id)):
+                return True
+    return False
+
+def timed_event_range(task):
+    zone = ZoneInfo(settings.TIME_ZONE)
+    # The first occurrence wins during the autumn overlap. A nonexistent
+    # spring time rolls forward by the size of the gap on the UTC round-trip.
+    start_utc = datetime.combine(task.due_date, task.due_time, zone).astimezone(dt_timezone.utc)
+    return start_utc.astimezone(zone), (start_utc + timedelta(minutes=30)).astimezone(zone)
 
 def event_payload(task):
     result = {"summary": ("✓ " if task.status == "done" else "") + task.title,
@@ -27,9 +52,9 @@ def event_payload(task):
     if task.project_id is None:
         result["visibility"] = "private"
     if task.due_time:
-        start = datetime.combine(task.due_date, task.due_time, ZoneInfo(settings.TIME_ZONE))
+        start, end = timed_event_range(task)
         result["start"] = {"dateTime": start.isoformat(), "timeZone": settings.TIME_ZONE}
-        result["end"] = {"dateTime": (start + timedelta(minutes=30)).isoformat(), "timeZone": settings.TIME_ZONE}
+        result["end"] = {"dateTime": end.isoformat(), "timeZone": settings.TIME_ZONE}
     else:
         result["start"] = {"date": task.due_date.isoformat()}
         result["end"] = {"date": (task.due_date + timedelta(days=1)).isoformat()}
@@ -39,8 +64,7 @@ def event_dates(task):
     if not task.due_date:
         raise Problem("Előbb adj meg határidőt.")
     if task.due_time:
-        start = datetime.combine(task.due_date, task.due_time, ZoneInfo(settings.TIME_ZONE))
-        end = start + timedelta(minutes=30)
+        start, end = timed_event_range(task)
         return start.astimezone(dt_timezone.utc).strftime("%Y%m%dT%H%M%SZ"), end.astimezone(dt_timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     return task.due_date.strftime("%Y%m%d"), (task.due_date + timedelta(days=1)).strftime("%Y%m%d")
 
@@ -87,12 +111,15 @@ def access_token(connection):
 def sync_link(link_id):
     # Row lock serializes browser and worker writes; deterministic IDs make retries idempotent.
     with transaction.atomic():
-        link = CalendarLink.objects.select_for_update().select_related("task", "user").get(id=link_id)
+        user_id = CalendarLink.objects.values_list("user_id", flat=True).get(id=link_id)
+        connection = GoogleConnection.objects.select_for_update().filter(user_id=user_id).first()
+        link = CalendarLink.objects.select_for_update().get(id=link_id)
         task = link.task
         link.attempted_at = timezone.now()
         link.save(update_fields=["attempted_at"])
         try:
-            connection = GoogleConnection.objects.get(user=link.user)
+            if connection is None:
+                raise GoogleConnection.DoesNotExist
             token = access_token(connection)
             headers = {"Authorization": f"Bearer {token}"}
             if not link.event_id and link.enabled and not task.deleted and task.due_date:
@@ -103,7 +130,7 @@ def sync_link(link_id):
                 link.synced_version, link.enabled, link.error = task.version, False, ""
                 link.save()
                 return True
-            url = "https://www.googleapis.com/calendar/v3/calendars/primary/events/" + quote(event_id, safe="")
+            url = event_url(event_id)
             if not link.enabled or task.deleted or not task.due_date:
                 response = requests.delete(url, headers=headers, timeout=15)
                 if response.status_code not in (200, 204, 404, 410):
@@ -117,7 +144,7 @@ def sync_link(link_id):
                 response = requests.put(url, headers=headers, json=payload, timeout=15)
                 if response.status_code in (404, 410):
                     payload["id"] = event_id
-                    response = requests.post("https://www.googleapis.com/calendar/v3/calendars/primary/events", headers=headers, json=payload, timeout=15)
+                    response = requests.post(PRIMARY_EVENTS, headers=headers, json=payload, timeout=15)
                     if response.status_code == 409:
                         response = requests.put(url, headers=headers, json=event_payload(task), timeout=15)
                 if response.status_code not in (200, 201):

@@ -228,7 +228,11 @@ export default function Settings({
                 <div className="error-banner">
                   {googleState === "cancelled"
                     ? "A csatlakozást megszakítottad."
-                    : "A Google-csatlakozás nem sikerült. Ellenőrizd a szerver OAuth-beállításait, majd próbáld újra."}
+                    : googleState === "account_mismatch"
+                      ? "Másik Google-fiókot választottál. Válts vissza a korábbi fiókra, vagy előbb vedd le a GURU-feladatokat a régi naptárból."
+                      : googleState === "account_unverified"
+                        ? "Nem tudtuk ellenőrizni, hogy ez a korábban csatlakoztatott Google-fiók. A régi kapcsolat megmaradt. Válaszd a korábbi fiókot, vagy előbb vedd le a GURU-feladatokat a régi naptárból."
+                        : "A Google-csatlakozás nem sikerült. Próbáld újra, vagy szólj az adminisztrátornak."}
                 </div>
               )}
               {!data.integrations.google_configured ? (

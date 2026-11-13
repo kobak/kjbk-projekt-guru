@@ -103,6 +103,8 @@ def save_task(data, user, task_id=None):
             raise Problem("A feladat nem található.", 404)
         if data.get("version") != t.version:
             raise Problem("Ezt a feladatot közben valaki módosította. Frissítsd, majd próbáld újra.", 409)
+        if t.project_archived:
+            raise Problem("Az archivált projekt feladatai csak olvashatók.")
     else:
         t = Task(created_by=user)
     old_assignee = t.assignee_id
@@ -121,8 +123,6 @@ def save_task(data, user, task_id=None):
                 t.project = Project.objects.get(id=project_id, archived=False)
             except (Project.DoesNotExist, ValueError, TypeError):
                 raise Problem("Válassz egy aktív projektet.")
-    elif t.project_archived:
-        raise Problem("Az archivált projekt feladatai csak olvashatók.")
     for field, choices in [("status", Task.Status.values), ("priority", Task.Priority.values)]:
         if field in data:
             if data[field] not in choices:

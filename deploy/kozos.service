@@ -9,7 +9,7 @@ Group=kozos
 WorkingDirectory=/opt/kozos
 Environment=PYTHONDONTWRITEBYTECODE=1
 Environment=PYTHONUNBUFFERED=1
-ExecStart=/opt/kozos/.venv/bin/gunicorn config.wsgi:application --no-control-socket --bind 127.0.0.1:8094 --workers 1 --threads 4 --timeout 60 --max-requests 1000 --max-requests-jitter 50 --access-logfile - --access-logformat "%%(m)s %%(U)s %%(s)s"
+ExecStart=/opt/kozos/.venv/bin/gunicorn config.wsgi:application --no-control-socket --bind 127.0.0.1:8094 --workers 1 --threads 4 --timeout 60 --max-requests 1000 --max-requests-jitter 50 --logger-class config.access_log.GuruLogger --access-logfile - --access-logformat "%%(m)s %%(U)s %%(s)s"
 Restart=on-failure
 RestartSec=5
 NoNewPrivileges=true
