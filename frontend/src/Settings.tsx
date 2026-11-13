@@ -16,7 +16,7 @@ import {
   Pencil,
 } from "lucide-react";
 import type { Bootstrap } from "./types";
-import { api } from "./api";
+import { api, ApiError } from "./api";
 import { isMacApp, macCommand, macNotificationsEnabled } from "./desktop";
 import { Avatar, Modal } from "./ui";
 import NotificationPreferences from "./NotificationPreferences";
@@ -57,6 +57,7 @@ export default function Settings({
   const [connections, setConnections] = useState<
     { id: number; name: string }[]
   >([]);
+  const [offerCalendarRecovery, setOfferCalendarRecovery] = useState(false);
   const refreshInvites = () =>
     api<{ invites: typeof invites }>("invites/").then((r) =>
       setInvites(r.invites),
@@ -76,7 +77,12 @@ export default function Settings({
       navigator.serviceWorker
         .getRegistration("/")
         .then((r) => r?.pushManager.getSubscription())
-        .then((s) => setPushOn(!!s))
+        .then(async (s) => {
+          if (s) {
+            const status = await api<{ enabled: boolean }>("push/status/", "POST", { endpoint: s.endpoint });
+            setPushOn(status.enabled);
+          }
+        })
         .catch(() => {});
   }, []);
   const run = async (fn: () => Promise<unknown>, message?: string) => {
@@ -131,13 +137,19 @@ export default function Settings({
       data.integrations.vapid_public_key.replace(/-/g, "+").replace(/_/g, "/"),
     );
     const key = Uint8Array.from(raw, (c) => c.charCodeAt(0));
-    const sub =
-      previous ||
-      (await registration.pushManager.subscribe({
+    const subscribe = () =>
+      registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: key,
-      }));
-    await api("push/", "POST", sub.toJSON());
+      });
+    const sub = previous || (await subscribe());
+    try {
+      await api("push/", "POST", sub.toJSON());
+    } catch (e) {
+      if (!(e instanceof ApiError) || e.status !== 409 || !previous) throw e;
+      await previous.unsubscribe();
+      await api("push/", "POST", (await subscribe()).toJSON());
+    }
     setPushOn(true);
   };
   const copy = async (value: string) => {
@@ -244,28 +256,57 @@ export default function Settings({
                   </span>
                 </div>
               ) : data.integrations.google_connected ? (
-                <div className="button-row">
-                  <a
-                    className="btn secondary compact"
-                    href="/api/google/connect/"
-                  >
-                    Újracsatlakozás
-                    <ExternalLink size={14} />
-                  </a>
-                  <button
-                    className="text-btn"
-                    disabled={busy}
-                    onClick={() => {
-                      if (confirm("Leválasztod a Google Naptáradat?"))
-                        run(
-                          () => api("google/disconnect/", "POST"),
-                          "Naptár leválasztva",
-                        );
-                    }}
-                  >
-                    Leválasztás
-                  </button>
-                </div>
+                <>
+                  <div className="button-row">
+                    <a
+                      className="btn secondary compact"
+                      href="/api/google/connect/"
+                    >
+                      Újracsatlakozás
+                      <ExternalLink size={14} />
+                    </a>
+                    <button
+                      className="text-btn"
+                      disabled={busy}
+                      onClick={() => {
+                        if (!confirm("Leválasztod a Google Naptáradat?")) return;
+                        setOfferCalendarRecovery(false);
+                        run(async () => {
+                          try {
+                            await api("google/disconnect/", "POST");
+                          } catch (e) {
+                            if (e instanceof ApiError && e.status === 409)
+                              setOfferCalendarRecovery(true);
+                            throw e;
+                          }
+                        }, "Naptár leválasztva");
+                      }}
+                    >
+                      Leválasztás
+                    </button>
+                  </div>
+                  {offerCalendarRecovery && (
+                    <>
+                      <p className="form-hint">
+                        Ha már nincs hozzáférésed a régi naptárhoz, leválaszthatod.
+                        A GURU-események a régi Google Naptárban maradhatnak.
+                      </p>
+                      <button
+                        className="text-btn danger"
+                        disabled={busy}
+                        onClick={() => {
+                          if (confirm("A korábbi GURU-események a régi Google Naptárban maradhatnak. Így is leválasztod?"))
+                            run(async () => {
+                              await api("google/disconnect/", "POST", { leave_events: true });
+                              setOfferCalendarRecovery(false);
+                            }, "Naptár leválasztva");
+                        }}
+                      >
+                        Leválasztás az események megtartásával
+                      </button>
+                    </>
+                  )}
+                </>
               ) : (
                 <a href="/api/google/connect/" className="btn primary">
                   <Link2 size={16} />

@@ -282,6 +282,12 @@ class NotificationTests(TestCase):
             tick()
         self.assertEqual(len(mail.outbox), 1)
 
+    def test_unbound_push_has_no_task_details(self):
+        self.subscription()
+        self.emit()
+        tick()
+        self.assertEqual(json.loads(self.push.call_args.kwargs["data"]), {"tag": "kozos"})
+
     def test_comments_use_comment_preferences(self):
         NotificationPreference.objects.create(user=self.member, email_events=["comment"], push_events=[])
         self.client.force_login(self.owner)
