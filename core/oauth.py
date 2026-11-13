@@ -1,12 +1,14 @@
+import hashlib
 import re
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.db import transaction
 from django.http import HttpResponseBadRequest
 from oauthlib.oauth2 import InvalidGrantError
 from oauth2_provider.http import OAuth2ResponseRedirect
-from oauth2_provider.models import RefreshToken
+from oauth2_provider.models import AccessToken, RefreshToken
 from oauth2_provider.oauth2_validators import OAuth2Validator
 from oauth2_provider.views import AuthorizationView
 
@@ -30,6 +32,22 @@ class MCPOAuthValidator(OAuth2Validator):
             ).exists():
                 raise RevokedRefreshGrant(request=request)
         return super()._save_bearer_token(token, request, *args, **kwargs)
+
+    @transaction.atomic
+    def revoke_token(self, token, token_type_hint, request, *args, **kwargs):
+        app_id = getattr(request.client, "pk", None)
+        if app_id is None:
+            return
+        lookup = {"application_id": app_id, "token_checksum": hashlib.sha256(token.encode()).hexdigest()}
+        refreshes = RefreshToken.objects.filter(**lookup)
+        owner_ids = set(refreshes.values_list("user_id", flat=True))
+        owner_ids.update(AccessToken.objects.filter(**lookup).exclude(user_id=None).values_list("user_id", flat=True))
+        list(User.objects.select_for_update().filter(pk__in=owner_ids).order_by("pk"))
+        # A refresh token can have rotated while revocation waited for the
+        # user's lock. Revoke its successor too, within this client's grant.
+        for family in set(refreshes.exclude(token_family=None).values_list("token_family", flat=True)):
+            RefreshToken.revoke_family(family)
+        return super().revoke_token(token, token_type_hint, request, *args, **kwargs)
 
 
 def is_loopback_callback(uri):
