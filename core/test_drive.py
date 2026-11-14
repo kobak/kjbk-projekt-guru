@@ -200,6 +200,9 @@ class DriveAttachmentTests(TestCase):
         self.assertEqual(response["Cross-Origin-Opener-Policy"], "same-origin-allow-popups")
         self.assertEqual(response["Referrer-Policy"], "strict-origin-when-cross-origin")
         self.assertEqual(self.client.get("/api/session/")["Referrer-Policy"], "same-origin")
+        invited = Client().get("/?invite=test-only")
+        self.assertEqual(invited["Referrer-Policy"], "strict-origin")
+        self.assertEqual(invited["Cross-Origin-Opener-Policy"], "same-origin-allow-popups")
         with override_settings(GOOGLE_PICKER_API_KEY=""):
             response = self.client.get("/")
             self.assertNotEqual(response.get("Cross-Origin-Opener-Policy"), "same-origin-allow-popups")

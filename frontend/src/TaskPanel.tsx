@@ -517,7 +517,9 @@ export default function TaskPanel({
                             ? "Szinkronizálás folyamatban…"
                             : `A naptáradban · ${dayLabel(task.due_date)}`)
                         : data.integrations.google_connected
-                          ? "A határidőt tedd a saját naptáradba."
+                          ? archived
+                            ? "Archivált feladathoz nem indítható naptárszinkron."
+                            : "A határidőt tedd a saját naptáradba."
                           : "A megnyíló naptárban véglegesítheted az eseményt."}
                     </p>
                   </div>
@@ -591,7 +593,7 @@ export default function TaskPanel({
                     <button
                       type="button"
                       className="btn secondary compact"
-                      disabled={busy || !task?.due_date}
+                      disabled={busy || archived || !task?.due_date}
                       onClick={() =>
                         mutate(async () => {
                           const r = await api<{ ok: boolean; error: string }>(

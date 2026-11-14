@@ -23,19 +23,25 @@ def cipher():
 def event_url(event_id):
     return PRIMARY_EVENTS + "/" + quote(event_id, safe="")
 
-def legacy_calendar_matches(links, headers):
+def legacy_calendar_match(links, headers):
     # A previously synchronized GURU event in the new credential's primary
     # calendar proves continuity without asking for broader Calendar access.
-    recent = links.order_by("-synced_version", "-attempted_at", "pk").values_list("event_id", "task_id")[:3]
-    for event_id, task_id in recent:
-        response = requests.get(event_url(event_id), headers=headers, timeout=5,
+    recent = links.order_by("-synced_version", "-attempted_at", "pk").values_list("pk", "event_id", "task_id")[:3]
+    for link_id, event_id, task_id in list(recent):
+        response = requests.get(event_url(event_id), headers=headers, timeout=(3, 5),
             params={"fields": "status,organizer(self),extendedProperties/private"})
         if response.status_code == 200:
             event = response.json()
             if (event.get("status") != "cancelled" and event.get("organizer", {}).get("self")
                     and event.get("extendedProperties", {}).get("private", {}).get("kozos_task") == str(task_id)):
-                return True
-    return False
+                return link_id, event_id
+    return None
+
+def unlink_calendar(links, *, leave_events):
+    if leave_events:
+        links.update(event_id="", event_url="", enabled=False, error="", attempted_at=None)
+    else:
+        links.filter(enabled=True).update(enabled=False, error="")
 
 def timed_event_range(task):
     zone = ZoneInfo(settings.TIME_ZONE)
@@ -109,18 +115,35 @@ def access_token(connection):
     return response.json()["access_token"]
 
 def sync_link(link_id):
-    # Row lock serializes browser and worker writes; deterministic IDs make retries idempotent.
+    user_id = CalendarLink.objects.filter(id=link_id).values_list("user_id", flat=True).first()
+    if user_id is None:
+        return False
+    snapshot = GoogleConnection.objects.filter(user_id=user_id).first()
+    token, token_error = None, None
+    if snapshot:
+        try:
+            token = access_token(snapshot)
+        except (Problem, requests.RequestException, ValueError, InvalidToken) as exc:
+            token_error = exc
+
+    # Keep the account and link stable during Calendar writes. Token exchange
+    # can run before locking because it never writes to the calendar.
     with transaction.atomic():
-        user_id = CalendarLink.objects.values_list("user_id", flat=True).get(id=link_id)
         connection = GoogleConnection.objects.select_for_update().filter(user_id=user_id).first()
-        link = CalendarLink.objects.select_for_update().get(id=link_id)
+        link = CalendarLink.objects.select_for_update().filter(id=link_id).first()
+        if link is None:
+            return False
         task = link.task
+        if connection and (not snapshot or connection.pk != snapshot.pk
+                           or connection.encrypted_refresh_token != snapshot.encrypted_refresh_token):
+            return False
         link.attempted_at = timezone.now()
         link.save(update_fields=["attempted_at"])
         try:
             if connection is None:
                 raise GoogleConnection.DoesNotExist
-            token = access_token(connection)
+            if token_error:
+                raise token_error
             headers = {"Authorization": f"Bearer {token}"}
             if not link.event_id and link.enabled and not task.deleted and task.due_date:
                 link.event_id = "k" + uuid.uuid4().hex

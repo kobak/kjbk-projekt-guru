@@ -31,6 +31,7 @@ urlpatterns = [
     path("api/attachments/<int:attachment_id>/download/", views.attachment),
     path("api/attachments/<int:attachment_id>/", views.attachment),
     path("api/notifications/read/", views.read_notifications), path("api/push/", views.push_subscription),
+    path("api/push/status/", views.push_status),
     path("api/desktop/notifications/", views.desktop_notifications),
     path("api/announcements/", views.announcements),
     path("api/announcements/<int:announcement_id>/", views.announcement_edit),

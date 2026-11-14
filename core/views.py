@@ -22,7 +22,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
 from .models import Workspace, Project, Task, ChecklistItem, Attachment, Notification, Activity, Invite, PushSubscription, GoogleConnection, CalendarLink
 from .services import Problem, person, project_json, task_json, task_queryset, text, password_text, save_project, save_task, delete_task, activity
-from .calendar import SCOPE, cipher, sync_link, calendar_file, legacy_calendar_matches
+from .calendar import SCOPE, cipher, sync_link, calendar_file, legacy_calendar_match, unlink_calendar
 from .announcements import announcement_json, visible_announcement, save_announcement, set_publication, dismiss_announcement
 from .notifications import preference_json, save_preferences, email_configured
 from .appearance import appearance_json, save_appearance
@@ -90,9 +90,12 @@ def login(request):
 @api(("POST",))
 def logout(request):
     endpoint = request.data.get("push_endpoint")
+    subscriptions = PushSubscription.objects.filter(user=request.user)
+    session_id = request.session.get("push_device")
+    if session_id:
+        subscriptions.filter(session_hash=hashlib.sha256(session_id.encode()).hexdigest()).delete()
     if isinstance(endpoint, str) and 0 < len(endpoint) <= 2000:
-        PushSubscription.objects.filter(user=request.user,
-            endpoint_hash=hashlib.sha256(endpoint.encode()).hexdigest()).delete()
+        subscriptions.filter(endpoint_hash=hashlib.sha256(endpoint.encode()).hexdigest()).delete()
     auth_logout(request)
     return {"ok": True}
 
@@ -293,10 +296,12 @@ def read_notifications(request):
 @api(("POST", "DELETE"))
 def push_subscription(request):
     endpoint = request.data.get("endpoint", "")
+    if not isinstance(endpoint, str) or len(endpoint) > 2000:
+        raise Problem("Nem támogatott push-szolgáltató.")
     url = urlparse(endpoint)
     host = (url.hostname or "").lower()
     allowed = ("fcm.googleapis.com", "push.services.mozilla.com", "push.apple.com", "notify.windows.com")
-    if len(endpoint) > 2000 or url.scheme != "https" or url.username or url.password or url.port not in (None, 443) or not any(host == h or host.endswith("." + h) for h in allowed):
+    if url.scheme != "https" or url.username or url.password or url.port not in (None, 443) or not any(host == h or host.endswith("." + h) for h in allowed):
         raise Problem("Nem támogatott push-szolgáltató.")
     if request.method == "DELETE":
         PushSubscription.objects.filter(user=request.user, endpoint=endpoint).delete()
@@ -304,8 +309,34 @@ def push_subscription(request):
         keys = request.data.get("keys", {})
         if not isinstance(keys, dict) or any(not isinstance(keys.get(k), str) or not 10 < len(keys[k]) < 200 for k in ("p256dh", "auth")):
             raise Problem("Hiányzó push-kulcsok.")
-        PushSubscription.objects.update_or_create(endpoint_hash=hashlib.sha256(endpoint.encode()).hexdigest(), defaults={"endpoint": endpoint, "user": request.user, "keys": keys})
+        if "push_device" not in request.session:
+            request.session["push_device"] = secrets.token_urlsafe(32)
+        session_hash = hashlib.sha256(request.session["push_device"].encode()).hexdigest()
+        endpoint_hash = hashlib.sha256(endpoint.encode()).hexdigest()
+        with transaction.atomic():
+            subscription, created = PushSubscription.objects.select_for_update().get_or_create(
+                endpoint_hash=endpoint_hash,
+                defaults={"endpoint": endpoint, "user": request.user, "keys": keys, "session_hash": session_hash},
+            )
+            if subscription.user_id != request.user.pk:
+                raise Problem("A böngésző értesítései egy másik GURU-fiókhoz tartoznak.", 409)
+            if not created:
+                subscription.keys = keys
+                subscription.session_hash = session_hash
+                subscription.save(update_fields=["keys", "session_hash"])
     return {"ok": True}
+
+@api(("POST",))
+def push_status(request):
+    endpoint = text(request.data, "endpoint", 2000, True)
+    subscriptions = PushSubscription.objects.filter(user=request.user,
+        endpoint_hash=hashlib.sha256(endpoint.encode()).hexdigest())
+    if not subscriptions.exists():
+        return {"enabled": False}
+    if "push_device" not in request.session:
+        request.session["push_device"] = secrets.token_urlsafe(32)
+    session_hash = hashlib.sha256(request.session["push_device"].encode()).hexdigest()
+    return {"enabled": bool(subscriptions.update(session_hash=session_hash))}
 
 @api(("GET", "POST", "DELETE"), admin=True)
 def invites(request):
@@ -330,9 +361,15 @@ def active_invites(token):
     return Invite.objects.filter(token_hash=hashlib.sha256(token.encode()).hexdigest(),
         accepted_at=None, expires_at__gt=timezone.now())
 
+def require_invite(query):
+    invite = query.first()
+    if invite is None:
+        raise Problem("A meghívó lejárt, már felhasználták vagy visszavonták. Kérj újat az adminisztrátortól.", 404)
+    return invite
+
 @api(("POST",), anonymous=True)
 def check_invite(request):
-    invite = get_object_or_404(active_invites(text(request.data, "token", 128, True)))
+    invite = require_invite(active_invites(text(request.data, "token", 128, True)))
     return {"email": invite.email}
 
 @api(("GET", "POST"), anonymous=True)
@@ -342,11 +379,11 @@ def accept_invite(request, token=None):
     if request.method == "GET":
         if token is None:
             return JsonResponse({"error": "Nem támogatott metódus."}, status=405)
-        return {"email": get_object_or_404(active_invites(token)).email}
+        return {"email": require_invite(active_invites(token)).email}
     invites = active_invites(token if token is not None else text(request.data, "token", 128, True))
     with transaction.atomic():
         Workspace.objects.select_for_update().get_or_create(id=1)
-        invite = get_object_or_404(invites.select_for_update())
+        invite = require_invite(invites.select_for_update())
         if User.objects.filter(is_active=True).count() >= settings.MAX_MEMBERS:
             raise Problem("A munkatér betelt.")
         if User.objects.filter(username=invite.email, is_active=True).exists():
@@ -368,16 +405,20 @@ def member_email(request, user_id):
     return change_member_email(request.user, user_id, request.data)
 
 @api(("POST",), admin=True)
+@transaction.atomic
 def deactivate_member(request, user_id):
     if user_id == request.user.id:
         raise Problem("Saját magadat itt nem kapcsolhatod ki.")
-    u = get_object_or_404(User, id=user_id, is_active=True)
+    u = get_object_or_404(User.objects.select_for_update(), id=user_id, is_active=True)
     if u.is_staff:
         raise Problem("Másik adminisztrátort csak a szerver adminfelületén lehet kikapcsolni.")
     u.is_active = False
     u.save(update_fields=["is_active"])
     PushSubscription.objects.filter(user=u).delete()
-    GoogleConnection.objects.filter(user=u).delete()
+    connection = GoogleConnection.objects.select_for_update().filter(user=u).first()
+    unlink_calendar(CalendarLink.objects.filter(user=u), leave_events=True)
+    if connection:
+        connection.delete()
     from oauth2_provider.models import AccessToken, RefreshToken
     RefreshToken.objects.filter(user=u).delete()
     AccessToken.objects.filter(user=u).delete()
@@ -416,21 +457,29 @@ def google_callback(request):
         subject = profile.get("sub") if isinstance(profile, dict) else None
         if not isinstance(subject, str) or not 0 < len(subject) <= 255:
             return redirect("/?settings=1&google=error")
+        links = CalendarLink.objects.filter(user=request.user)
+        existing_events = links.exclude(event_id="")
+        snapshot = GoogleConnection.objects.filter(user=request.user).first()
+        legacy_match = None
+        if snapshot and not snapshot.google_subject:
+            legacy_match = legacy_calendar_match(existing_events, headers)
         with transaction.atomic():
-            User.objects.select_for_update().get(pk=request.user.pk)
+            user = User.objects.select_for_update().get(pk=request.user.pk)
+            if not user.is_active:
+                return redirect("/?settings=1&google=error")
             connection = GoogleConnection.objects.select_for_update().filter(user=request.user).first()
-            links = CalendarLink.objects.filter(user=request.user)
-            existing_events = links.exclude(event_id="")
             old_subject = connection.google_subject if connection else ""
             if old_subject != subject:
                 if existing_events.exists():
                     if old_subject:
                         return redirect("/?settings=1&google=account_mismatch")
-                    if not legacy_calendar_matches(existing_events, headers):
+                    if (not legacy_match or not connection or connection.pk != snapshot.pk
+                            or connection.encrypted_refresh_token != snapshot.encrypted_refresh_token
+                            or not existing_events.filter(pk=legacy_match[0], event_id=legacy_match[1]).exists()):
                         return redirect("/?settings=1&google=account_unverified")
                 else:
                     # The old account's unsynced adds should not run under a new identity.
-                    links.filter(enabled=True).update(enabled=False, error="")
+                    unlink_calendar(links, leave_events=False)
             GoogleConnection.objects.update_or_create(user=request.user, defaults={
                 "encrypted_refresh_token": cipher().encrypt(result["refresh_token"].encode()).decode(),
                 "google_subject": subject, "error": "",
@@ -443,11 +492,15 @@ def google_callback(request):
 @api(("POST",))
 @transaction.atomic
 def google_disconnect(request):
+    leave_events = request.data.get("leave_events", False)
+    if not isinstance(leave_events, bool):
+        raise Problem("Érvénytelen naptárbeállítás.")
     User.objects.select_for_update().get(pk=request.user.pk)
     connection = GoogleConnection.objects.select_for_update().filter(user=request.user).first()
-    if CalendarLink.objects.filter(user=request.user).exclude(event_id="").exists():
-        raise Problem("Előbb távolítsd el a naptárból a hozzáadott feladatokat. Így nem maradnak hátra események.")
-    CalendarLink.objects.filter(user=request.user, enabled=True).update(enabled=False, error="")
+    links = CalendarLink.objects.filter(user=request.user)
+    if not leave_events and links.exclude(event_id="").exists():
+        raise Problem("Előbb vedd le a GURU-feladatokat a régi naptárból. Ha nincs hozzáférésed, választhatod a leválasztást az események megtartásával.", 409)
+    unlink_calendar(links, leave_events=leave_events)
     if connection:
         connection.delete()
     return {"ok": True}
@@ -478,8 +531,11 @@ def mcp_connections(request):
 @api(("POST", "DELETE"))
 def task_calendar(request, task_id):
     t = get_object_or_404(Task.objects.visible_to(request.user), id=task_id, deleted=False)
-    if request.method == "POST" and not t.due_date:
-        raise Problem("Előbb adj meg határidőt.")
+    if request.method == "POST":
+        if t.project_archived:
+            raise Problem("Archivált projekt feladata nem adható hozzá a naptárhoz.")
+        if not t.due_date:
+            raise Problem("Előbb adj meg határidőt.")
     with transaction.atomic():
         if not GoogleConnection.objects.select_for_update().filter(user=request.user).first():
             raise Problem("Előbb csatlakoztasd a saját Google Naptáradat a Beállításokban.")
@@ -511,7 +567,7 @@ def spa(request, path=""):
         # Never send task paths or query parameters to Google.
         response["Referrer-Policy"] = "strict-origin-when-cross-origin"
     if "invite" in request.GET:
-        response["Referrer-Policy"] = "no-referrer"
+        response["Referrer-Policy"] = "strict-origin"
     return response
 
 def health(request):

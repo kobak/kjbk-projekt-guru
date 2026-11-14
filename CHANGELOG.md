@@ -2,6 +2,10 @@
 
 ## Következő kiadás
 
+- A böngészős push az eszköz belépéséhez kötődik. A régebbi feliratkozások általános jelzést mutatnak addig, amíg az eszköz a Beállításokban újra azonosítja őket.
+- Elérhetetlen régi Google Naptár esetén külön megerősítéssel az események megtartásával is lehet leválasztani a fiókot. Archivált feladathoz új szinkron nem indítható, a meglévő esemény eltávolítható.
+- Csapattag letiltásakor a GURU megszünteti a szinkront, a korábban létrehozott események a tag Google Naptárában maradnak.
+- A meghívó hibája érthető üzenetet ad, és meghívás után is működik a Drive-fájlválasztó. A kliens által visszavont MCP-frissítőtoken időközben kiadott utódai is érvénytelenné válnak.
 - A Kapcsolatok alatt a még megújítható MCP-hozzáférés akkor is látszik és visszavonható, ha az aktuális hozzáférési token már lejárt.
 - A Google Naptár fiókválasztót nyit. Ha a korábbi naptárhoz még tartoznak GURU-események, csak ugyanahhoz a fiókhoz lehet újracsatlakozni. A `0010_google_connection_subject` migráció megőrzi a régi kapcsolatokat.
 - A határidős események az óraátállításkor is 30 percig tartanak a Google Naptárban és az exportban. Archivált projektből nem lehet feladatot áthelyezni.

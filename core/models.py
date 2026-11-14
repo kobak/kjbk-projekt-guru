@@ -209,6 +209,7 @@ class PushSubscription(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     endpoint = models.URLField(max_length=2000)
     endpoint_hash = models.CharField(max_length=64, unique=True)
+    session_hash = models.CharField(max_length=64, blank=True, db_default="", db_index=True)
     keys = models.JSONField()
     created_at = models.DateTimeField(auto_now_add=True)
     def save(self, *args, **kwargs):

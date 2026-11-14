@@ -1,4 +1,5 @@
 import hashlib
+import uuid
 from datetime import date, time, timedelta
 from urllib.parse import parse_qs, urlencode, urlparse
 from unittest.mock import Mock, patch
@@ -10,7 +11,7 @@ from django.utils import timezone
 from oauth2_provider.models import AccessToken, Application, RefreshToken
 from oauth2_provider.oauth2_validators import OAuth2Validator
 
-from .calendar import SCOPE, calendar_file, cipher, event_payload
+from .calendar import SCOPE, calendar_file, cipher, event_payload, sync_link
 from .models import CalendarLink, GoogleConnection, Project, PushSubscription, Task, Workspace
 
 
@@ -37,7 +38,8 @@ class ReviewRegressionTests(TestCase):
                                             resource=[settings.APP_URL + "/mcp"],
                                             token=f"access-{app.name}-{user.pk}", expires=timezone.now() - age)
         raw_refresh = f"refresh-{app.name}-{user.pk}"
-        RefreshToken.objects.create(user=user, application=app, access_token=access, token=raw_refresh, revoked=revoked)
+        RefreshToken.objects.create(user=user, application=app, access_token=access, token=raw_refresh,
+                                    revoked=revoked, token_family=uuid.uuid4())
         return raw_refresh
 
     def refresh(self, app, raw_refresh):
@@ -77,6 +79,17 @@ class ReviewRegressionTests(TestCase):
             result = self.refresh(app, raw)
         self.assertEqual(result.json()["error"], "invalid_grant")
         self.assertFalse(AccessToken.objects.filter(application=app).exists())
+
+    def test_mcp_client_revocation_reaches_a_rotated_refresh_token(self):
+        app = self.application("Refresh rotation")
+        raw = self.token_pair(app, self.user)
+        rotated = self.refresh(app, raw)
+        self.assertEqual(rotated.status_code, 200)
+        revoke = Client().post("/oauth/revoke_token/", urlencode({
+            "client_id": app.client_id, "token": raw, "token_type_hint": "refresh_token",
+        }), content_type="application/x-www-form-urlencoded")
+        self.assertEqual(revoke.status_code, 200)
+        self.assertEqual(self.refresh(app, rotated.json()["refresh_token"]).json()["error"], "invalid_grant")
 
     def connect_google(self, subject, legacy_event_status=404, organizer_is_self=True):
         start = self.client.get("/api/google/connect/")
@@ -130,6 +143,23 @@ class ReviewRegressionTests(TestCase):
         conn.refresh_from_db()
         self.assertEqual(conn.google_subject, "verified-subject")
 
+    def test_calendar_sync_discards_token_if_connection_changes_during_exchange(self):
+        conn, link = self.existing_calendar("first-subject")
+
+        def reconnect(_connection):
+            GoogleConnection.objects.filter(pk=conn.pk).update(
+                encrypted_refresh_token=cipher().encrypt(b"new-refresh").decode(),
+            )
+            return "old-access-token"
+
+        with patch("core.calendar.access_token", side_effect=reconnect), patch(
+            "core.calendar.requests.put",
+        ) as put:
+            self.assertFalse(sync_link(link.pk))
+        put.assert_not_called()
+        link.refresh_from_db()
+        self.assertIsNone(link.attempted_at)
+
     def test_google_can_switch_without_events_but_does_not_move_pending_adds(self):
         conn, link = self.existing_calendar("first-subject", event_id="")
         self.assertTrue(self.connect_google("other-subject")[0].endswith("google=connected"))
@@ -142,6 +172,50 @@ class ReviewRegressionTests(TestCase):
         self.assertTrue(self.connect_google(None)[0].endswith("google=error"))
         self.assertFalse(GoogleConnection.objects.filter(user=self.user).exists())
         self.assertTrue(self.connect_google("first-subject")[0].endswith("google=connected"))
+
+    def test_deactivating_a_member_detaches_calendar_and_disables_old_links(self):
+        conn = GoogleConnection.objects.create(user=self.other, google_subject="other-subject",
+            encrypted_refresh_token=cipher().encrypt(b"old-refresh").decode())
+        link = CalendarLink.objects.create(task=self.task, user=self.other, event_id="ktestevent",
+            event_url="https://calendar.google.com/calendar/event", error="Elavult hiba")
+        with patch("core.calendar.requests.delete") as delete:
+            self.assertEqual(self.client.post(f"/api/members/{self.other.pk}/deactivate/").status_code, 200)
+        delete.assert_not_called()
+        self.other.refresh_from_db()
+        self.assertFalse(self.other.is_active)
+        self.assertFalse(GoogleConnection.objects.filter(pk=conn.pk).exists())
+        link.refresh_from_db()
+        self.assertEqual((link.enabled, link.event_id, link.event_url, link.error), (False, "", "", ""))
+
+    def test_disconnect_requires_explicit_choice_if_old_calendar_is_unreachable(self):
+        conn, link = self.existing_calendar("first-subject")
+        path = "/api/google/disconnect/"
+        self.assertEqual(self.client.post(path, {}, content_type="application/json").status_code, 409)
+        self.assertTrue(GoogleConnection.objects.filter(pk=conn.pk).exists())
+        self.assertEqual(self.client.post(path, {"leave_events": "yes"}, content_type="application/json").status_code, 400)
+        with patch("core.calendar.requests.delete") as delete:
+            self.assertEqual(self.client.post(path, {"leave_events": True}, content_type="application/json").status_code, 200)
+        delete.assert_not_called()
+        self.assertFalse(GoogleConnection.objects.filter(pk=conn.pk).exists())
+        link.refresh_from_db()
+        self.assertEqual(link.event_id, "")
+        self.assertFalse(link.enabled)
+        self.assertTrue(self.connect_google("other-subject")[0].endswith("google=connected"))
+
+    def test_archived_task_cannot_add_calendar_event_but_can_remove_it(self):
+        self.project.archived = True
+        self.project.save(update_fields=["archived"])
+        _, link = self.existing_calendar("first-subject")
+        url = f"/api/tasks/{self.task.id}/calendar/"
+        with patch("core.calendar.access_token", return_value="test-token"), patch(
+            "core.calendar.requests.delete", return_value=Mock(status_code=204),
+        ) as delete:
+            self.assertEqual(self.client.post(url).status_code, 400)
+            delete.assert_not_called()
+            self.assertTrue(self.client.delete(url).json()["ok"])
+            delete.assert_called_once()
+        link.refresh_from_db()
+        self.assertEqual(link.event_id, "")
 
     def test_timed_event_is_thirty_real_minutes_on_both_dst_transitions(self):
         self.task.due_time = time(2, 45)
@@ -182,7 +256,9 @@ class ReviewRegressionTests(TestCase):
         accepted = client.post("/api/invite/accept/", {"token": token, "name": "Meghívott", "password": "Only-a-test-password!2026"},
                                content_type="application/json", HTTP_X_CSRFTOKEN=csrf)
         self.assertEqual(accepted.status_code, 200)
-        self.assertEqual(Client().post("/api/invite/check/", {"token": token}, content_type="application/json").status_code, 404)
+        expired = Client().post("/api/invite/check/", {"token": token}, content_type="application/json")
+        self.assertEqual(expired.status_code, 404)
+        self.assertIn("A meghívó lejárt", expired.json()["error"])
 
     def test_logout_removes_only_this_browser_subscription_and_ends_session(self):
         for user, suffix in [(self.user, "here"), (self.user, "elsewhere"), (self.other, "other-user")]:
@@ -195,3 +271,28 @@ class ReviewRegressionTests(TestCase):
         self.assertIsNone(self.client.get("/api/session/").json()["user"])
         self.assertCountEqual(PushSubscription.objects.values_list("endpoint", flat=True),
             ["https://fcm.googleapis.com/elsewhere", "https://fcm.googleapis.com/other-user"])
+
+    def test_logout_removes_bound_subscription_without_browser_lookup(self):
+        endpoint = "https://fcm.googleapis.com/this-device"
+        keys = {"p256dh": "test-public-key", "auth": "test-auth-key"}
+        self.assertEqual(self.client.post("/api/push/", {"endpoint": endpoint, "keys": keys},
+                                          content_type="application/json").status_code, 200)
+        other = Client()
+        other.force_login(self.other)
+        self.assertFalse(other.post("/api/push/status/", {"endpoint": endpoint},
+                                    content_type="application/json").json()["enabled"])
+        self.assertEqual(other.post("/api/push/", {"endpoint": endpoint, "keys": keys},
+                                    content_type="application/json").status_code, 409)
+        self.assertEqual(self.client.post("/api/logout/").status_code, 200)
+        self.assertFalse(PushSubscription.objects.filter(endpoint=endpoint).exists())
+
+    def test_existing_push_subscription_can_be_adopted_by_its_own_session(self):
+        endpoint = "https://fcm.googleapis.com/existing-device"
+        sub = PushSubscription.objects.create(user=self.user, endpoint=endpoint, keys={})
+        self.assertEqual(sub.session_hash, "")
+        response = self.client.post("/api/push/status/", {"endpoint": endpoint}, content_type="application/json")
+        self.assertTrue(response.json()["enabled"])
+        sub.refresh_from_db()
+        self.assertNotEqual(sub.session_hash, "")
+        self.assertEqual(self.client.post("/api/logout/").status_code, 200)
+        self.assertFalse(PushSubscription.objects.filter(pk=sub.pk).exists())

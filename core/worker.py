@@ -67,8 +67,13 @@ def send_notification_push(notification_id):
     failed, sent = False, False
     for sub in subscriptions:
         try:
+            # Legacy subscriptions cannot always be removed at logout. Keep
+            # their notices generic until that browser registers them again.
+            data = {"tag": f"kozos-{n.id}"} if sub.session_hash else {"tag": "kozos"}
+            if sub.session_hash:
+                data.update(title=n.title, body=n.body, url=f"/?task={n.task_id}" if n.task_id else "/")
             webpush(subscription_info={"endpoint": sub.endpoint, "keys": sub.keys},
-                data=json.dumps({"title": n.title, "body": n.body, "tag": f"kozos-{n.id}", "url": f"/?task={n.task_id}" if n.task_id else "/"}),
+                data=json.dumps(data),
                 vapid_private_key=settings.VAPID_PRIVATE_KEY, vapid_claims={"sub": settings.VAPID_SUBJECT}, timeout=10, ttl=3600)
             sent = True
         except WebPushException as exc:
