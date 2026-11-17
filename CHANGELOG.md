@@ -1,6 +1,12 @@
 # Változásnapló
 
-## Következő kiadás
+## 1.6.1 — 2026-11-17
+
+- E-mailes jelszó-visszaállítás a webes és Mac-belépésből: egyszer használható, egyórás link; háttérben küldött levél, újrapróbálás, kéréskorlátozás és fióklétezést el nem áruló válasz. Sikeres visszaállítás után a korábbi munkamenetek és böngészős push-feliratkozások érvénytelenek.
+- Az aktív felület óránként meghosszabbítja a 14 napos bejelentkezést, stabil munkamenet-azonosítóval. Az önálló natív értesítésellenőrzés nem hosszabbítja meg a bejelentkezést.
+- Mac 0.1.1: a melléklet és naptárfájl letöltése nem vált át hibaképernyőre. A mentés megszakítása csendes, a valódi letöltési hiba külön üzenetet kap. Intel és Apple Silicon változat egy csomagban.
+- `0012_password_reset_delivery` migráció. 190 szerveroldali teszt, 11 frontendteszt és 27 Mac-protokollellenőrzés; valódi Mac-mentési és újraindítási próba demóadatokkal.
+- Hozzászólásküldés ⌘ Enterrel és Ctrl Enterrel a webes felületen és a Mac-appban.
 
 - A böngészős push az eszköz belépéséhez kötődik. A régebbi feliratkozások általános jelzést mutatnak addig, amíg az eszköz a Beállításokban újra azonosítja őket.
 - Elérhetetlen régi Google Naptár esetén külön megerősítéssel az események megtartásával is lehet leválasztani a fiókot. Archivált feladathoz új szinkron nem indítható, a meglévő esemény eltávolítható.

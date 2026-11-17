@@ -16,6 +16,8 @@ urlpatterns = [
     path("mcp", mcp.endpoint),
     path("health/", views.health), path("sw.js", views.service_worker),
     path("api/session/", views.session), path("api/login/", views.login), path("api/logout/", views.logout),
+    path("api/password-reset/", views.password_reset_request),
+    path("api/password-reset/confirm/", views.password_reset_confirm),
     path("api/profile/", views.profile), path("api/bootstrap/", views.bootstrap),
     path("api/appearance/", views.appearance),
     path("api/list-order/", views.list_order),

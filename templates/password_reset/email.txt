@@ -1,0 +1,11 @@
+Szia{% if name %}, {{ name }}{% endif %}!
+
+Új jelszót kértél a kjbk projekt guru fiókodhoz.
+A következő linken állíthatsz be új jelszót:
+
+{{ reset_url }}
+
+A link egyszer használható, és {{ minutes }} percig érvényes.
+Ha nem te kérted, nincs teendőd: a jelszavad változatlan marad.
+
+kjbk projekt guru

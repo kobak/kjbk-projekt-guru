@@ -1,5 +1,18 @@
 import Foundation
 
+enum NavigationFailurePolicy {
+    static func isCancellation(_ error: Error) -> Bool {
+        let value = error as NSError
+        return value.domain == NSURLErrorDomain && value.code == NSURLErrorCancelled
+    }
+    static func shouldReport(_ error: Error) -> Bool {
+        let value = error as NSError
+        // WebKit's documented WebKitErrorFrameLoadInterruptedByPolicyChange
+        // (102) is also emitted by WKWebView when navigation becomes a download.
+        return !isCancellation(error) && !(value.domain == "WebKitErrorDomain" && value.code == 102)
+    }
+}
+
 struct DesktopNotice: Decodable {
     let id: Int
     let title: String
@@ -49,6 +62,11 @@ struct ServerPolicy {
     func isOwn(_ url: URL) -> Bool {
         url.scheme == base.scheme && url.host?.lowercased() == base.host?.lowercased()
             && effectivePort(url) == effectivePort(base) && url.user == nil && url.password == nil
+    }
+    func isDownload(_ url: URL) -> Bool {
+        guard isOwn(url) else { return false }
+        return url.path.range(of: "^/api/attachments/[0-9]+/download/?$", options: .regularExpression) != nil
+            || url.path.range(of: "^/api/tasks/[0-9a-fA-F-]{36}/calendar\\.ics$", options: .regularExpression) != nil
     }
     func localURL(_ path: String) -> URL? {
         guard path.hasPrefix("/"), !path.hasPrefix("//"), !path.contains("\\"), !path.contains("\r"), !path.contains("\n"),
