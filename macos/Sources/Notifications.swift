@@ -11,6 +11,7 @@ final class MacNotifications: NSObject, ObservableObject, UNUserNotificationCent
     @Published private(set) var unread = 0
     var changed: (() -> Void)?
     var openNotice: ((String?) -> Void)?
+    var openUpdate: (() -> Void)?
     weak var webView: WKWebView?
     let policy: ServerPolicy
     private var timer: Timer?
@@ -84,6 +85,19 @@ final class MacNotifications: NSObject, ObservableObject, UNUserNotificationCent
             do { try await center.add(UNNotificationRequest(identifier: "guru-local-test", content: content, trigger: nil)) }
             catch { stateText = "A próbaértesítés nem jeleníthető meg." }
         }
+    }
+    func notifyUpdate(version: String) async -> Bool {
+        guard enabled else { return false }
+        let status = await center.notificationSettings().authorizationStatus
+        guard enabled, status == .authorized || status == .provisional else { return false }
+        let content = UNMutableNotificationContent()
+        content.title = "Új GURU Mac-verzió: \(version)"
+        content.body = "Kattints a frissítés megnyitásához."
+        content.userInfo = ["guruUpdate": version]
+        do {
+            try await center.add(UNNotificationRequest(identifier: "guru-mac-update", content: content, trigger: nil))
+            return true
+        } catch { return false }
     }
     private func publishWebState(authorized: Bool) {
         let value = enabled && authorized ? "true" : "false"
@@ -183,6 +197,10 @@ final class MacNotifications: NSObject, ObservableObject, UNUserNotificationCent
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void) {
         let info = response.notification.request.content.userInfo
+        if info["guruUpdate"] is String {
+            Task { @MainActor in self.openUpdate?(); completionHandler() }
+            return
+        }
         let user = info["user"] as? Int
         let task = info["task"] as? String
         Task { @MainActor in

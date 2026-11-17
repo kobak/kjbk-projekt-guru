@@ -3,7 +3,7 @@ import SwiftUI
 import WebKit
 
 @MainActor
-final class GuruApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler, WKDownloadDelegate {
+final class GuruApp: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuItemValidation, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler, WKDownloadDelegate {
     private var window: NSWindow!
     private var web: WKWebView!
     private var notifications: MacNotifications!
@@ -14,6 +14,10 @@ final class GuruApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNaviga
     private var returnURL: URL?
     private var policy: ServerPolicy!
     private var downloads: [WKDownload] = []
+    private var updates: MacUpdates!
+    private var updateItems: [NSMenuItem] = []
+    private var pendingUpdate: MacRelease?
+    private var notifyingUpdate: String?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let info = Bundle.main.infoDictionary ?? [:]
@@ -25,6 +29,11 @@ final class GuruApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNaviga
         }
         policy = valid
         notifications = MacNotifications(policy: valid)
+        updates = MacUpdates(version: info["CFBundleShortVersionString"] as? String ?? "",
+            repository: info["GURUUpdateRepository"] as? String)
+        updates.changed = { [weak self] in self?.updateStatus(); self?.presentPendingUpdate() }
+        updates.onResult = { [weak self] result, manual in self?.handleUpdate(result, manual: manual) }
+        notifications.openUpdate = { [weak self] in self?.checkForUpdates() }
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .default()
         configuration.preferences.javaScriptCanOpenWindowsAutomatically = false
@@ -55,6 +64,7 @@ final class GuruApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNaviga
         makeStatusItem()
         web.load(URLRequest(url: valid.base))
         notifications.start()
+        updates.start()
         NotificationCenter.default.addObserver(self, selector: #selector(wokeUp), name: NSApplication.didBecomeActiveNotification, object: nil)
         NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(wokeUp), name: NSWorkspace.didWakeNotification, object: nil)
         NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(wokeUp), name: NSWorkspace.sessionDidBecomeActiveNotification, object: nil)
@@ -87,6 +97,7 @@ final class GuruApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNaviga
         let main = NSMenu()
         let appMenu = NSMenu(title: "kjbk projekt guru")
         appMenu.addItem(item("A kjbk projekt guru névjegye", #selector(about)))
+        appMenu.addItem(updateMenuItem())
         appMenu.addItem(.separator())
         appMenu.addItem(item("Mac-beállítások…", #selector(settings), ","))
         appMenu.addItem(item("Fiók és csapat beállításai…", #selector(webSettings)))
@@ -136,6 +147,7 @@ final class GuruApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNaviga
         menu.addItem(notificationItem)
         menu.addItem(item("Próbaértesítés", #selector(testNotification)))
         menu.addItem(item("Mac-beállítások…", #selector(settings)))
+        menu.addItem(updateMenuItem())
         menu.addItem(.separator())
         menu.addItem(item("Kilépés", #selector(NSApplication.terminate(_:)), target: NSApp))
         status.menu = menu
@@ -148,6 +160,72 @@ final class GuruApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNaviga
         NSApp.dockTile.badgeLabel = count > 0 ? String(count) : nil
         connectionItem.title = notifications.stateText
         notificationItem.title = notifications.enabled ? "Értesítések kikapcsolása" : "Értesítések bekapcsolása…"
+        for entry in updateItems {
+            entry.title = updates.checking ? "Frissítések keresése…" : updates.available.map { "Új Mac-verzió: \($0.version)…" } ?? "Frissítések keresése…"
+        }
+    }
+    private func updateMenuItem() -> NSMenuItem {
+        let entry = item("Frissítések keresése…", #selector(checkForUpdates))
+        updateItems.append(entry)
+        return entry
+    }
+    func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+        if menuItem.action == #selector(checkForUpdates) { return updates.isConfigured && !updates.checking }
+        return true
+    }
+    @objc private func checkForUpdates() { Task { await updates.check(manual: true) } }
+    private func handleUpdate(_ result: UpdateCheckResult, manual: Bool) {
+        switch result {
+        case .available(let release):
+            pendingUpdate = release
+            if manual { presentUpdate(release) }
+            else if !NSApp.isActive && !updates.wasAnnounced(release.version, channel: "notice")
+                    && !updates.wasAnnounced(release.version, channel: "dialog") && notifyingUpdate != release.version {
+                notifyingUpdate = release.version
+                Task {
+                    defer { notifyingUpdate = nil }
+                    if await notifications.notifyUpdate(version: release.version) {
+                        updates.markAnnounced(release.version, channel: "notice")
+                    }
+                }
+            }
+        case .current:
+            pendingUpdate = nil
+            if manual { updateMessage("A GURU naprakész", "A telepített Mac-verzió: \(updates.currentVersion).") }
+        case .failed(let message):
+            if manual { updateMessage("A frissítés most nem ellenőrizhető", message) }
+        case .skipped: break
+        }
+    }
+    private func presentPendingUpdate() {
+        guard let release = pendingUpdate, updates.automatic, !updates.checking,
+              !updates.wasAnnounced(release.version, channel: "dialog"), NSApp.isActive,
+              NSApp.keyWindow === window, window.isVisible, window.attachedSheet == nil else { return }
+        presentUpdate(release)
+    }
+    func windowDidBecomeKey(_ notification: Notification) { if updates != nil { presentPendingUpdate() } }
+    private func presentUpdate(_ release: MacRelease) {
+        pendingUpdate = nil
+        updates.markAnnounced(release.version, channel: "dialog")
+        showWindow()
+        let alert = NSAlert()
+        alert.messageText = "Új GURU Mac-verzió érhető el"
+        alert.informativeText = "Telepítve: \(updates.currentVersion) · Új verzió: \(release.version)\n\nA letöltés után lépj ki a GURU-ból (⌘Q), majd cseréld le az appot az Alkalmazások mappában. A fiókod és a beállításaid megmaradnak."
+        alert.addButton(withTitle: "Letöltés")
+        alert.addButton(withTitle: "Újdonságok")
+        alert.addButton(withTitle: "Később").keyEquivalent = "\u{1b}"
+        alert.beginSheetModal(for: window) { result in
+            if result == .alertFirstButtonReturn { NSWorkspace.shared.open(release.downloadURL) }
+            else if result == .alertSecondButtonReturn { NSWorkspace.shared.open(release.releaseURL) }
+        }
+    }
+    private func updateMessage(_ title: String, _ message: String) {
+        showWindow()
+        let alert = NSAlert()
+        alert.messageText = title
+        alert.informativeText = message
+        alert.addButton(withTitle: "Rendben")
+        alert.beginSheetModal(for: window)
     }
     @objc func showWindow() { window.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true) }
     @objc private func closeWindow() { NSApp.keyWindow?.performClose(nil) }
@@ -169,7 +247,11 @@ final class GuruApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNaviga
     @objc private func webSettings() { webCommand("settings") }
     @objc private func toggleNotifications() { notifications.toggle() }
     @objc private func testNotification() { notifications.testNotification() }
-    @objc private func wokeUp() { Task { await notifications.updatePermission(); await notifications.poll() } }
+    @objc private func wokeUp() {
+        Task { await notifications.updatePermission(); await notifications.poll() }
+        Task { await updates.check() }
+        presentPendingUpdate()
+    }
     @objc private func openBrowser() { NSWorkspace.shared.open(returnURL ?? web.url ?? policy.base) }
     @objc private func about() {
         NSApp.orderFrontStandardAboutPanel(options: [NSApplication.AboutPanelOptionKey.applicationName: "kjbk projekt guru",
@@ -179,11 +261,11 @@ final class GuruApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNaviga
     @objc private func helpPage() { NSWorkspace.shared.open(URL(string: "https://github.com/kobak/kjbk-projekt-guru/blob/main/docs/mac-app.md")!) }
     @objc private func settings() {
         if settingsWindow == nil {
-            let controller = NSHostingController(rootView: MacSettings(model: notifications))
+            let controller = NSHostingController(rootView: MacSettings(model: notifications, updates: updates, checkUpdates: { [weak self] in self?.checkForUpdates() }))
             let panel = NSWindow(contentViewController: controller)
             panel.title = "GURU · Mac-beállítások"
             panel.styleMask = [.titled, .closable]
-            panel.setContentSize(NSSize(width: 540, height: 380))
+            panel.setContentSize(NSSize(width: 540, height: 540))
             panel.isReleasedWhenClosed = false
             panel.center()
             settingsWindow = panel
@@ -325,6 +407,8 @@ extension GuruApp: NSToolbarDelegate {
 
 private struct MacSettings: View {
     @ObservedObject var model: MacNotifications
+    @ObservedObject var updates: MacUpdates
+    let checkUpdates: () -> Void
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             HStack(spacing: 14) {
@@ -341,6 +425,16 @@ private struct MacSettings: View {
             Text("Az ablak bezárása után a GURU a menüsorban fut tovább, és 15 másodpercenként ellenőrzi az új értesítéseket. A Kilépés leállítja. Alvó vagy internet nélküli Mac-en a jelzések késhetnek.")
                 .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             Text("Az értesítések típusait a GURU Beállítások → Értesítések részének Push oszlopában választhatod ki.")
+                .font(.callout).fixedSize(horizontal: false, vertical: true)
+            Divider()
+            Toggle("Automatikus frissítésellenőrzés", isOn: Binding(get: { updates.automatic }, set: { updates.setAutomatic($0) }))
+                .disabled(!updates.isConfigured)
+            Text(updates.stateText).font(.callout).foregroundStyle(.secondary)
+            HStack {
+                Button("Frissítések keresése…", action: checkUpdates).disabled(updates.checking || !updates.isConfigured)
+                if let release = updates.available { Link("Letöltés", destination: release.downloadURL) }
+            }
+            Text("Induláskor és naponta ellenőrzi a Mac-kiadásokat. A letöltést és a telepítést te indítod.")
                 .font(.callout).fixedSize(horizontal: false, vertical: true)
         }.padding(26).frame(width: 540)
     }

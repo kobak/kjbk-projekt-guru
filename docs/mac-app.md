@@ -1,10 +1,21 @@
 # GURU Mac-alkalmazás
 
-A Mac 0.1.1 a megszokott GURU-felületet natív AppKit-ablakban jeleníti meg. Natív eszköztár, menük, fájlválasztó, mentési ablak, rendszerértesítések, menüsoros elérés és Dock-jelvény egészíti ki. Ugyanazt a szervert és fiókot használja, mint a web; helyi feladat-adatbázist nem hoz létre.
+A Mac 0.1.2 a megszokott GURU-felületet natív AppKit-ablakban jeleníti meg. Natív eszköztár, menük, fájlválasztó, mentési ablak, rendszerértesítések, menüsoros elérés és Dock-jelvény egészíti ki. Ugyanazt a szervert és fiókot használja, mint a web; helyi feladat-adatbázist nem hoz létre.
 
-[Mac 0.1.1 letöltése](https://github.com/kobak/kjbk-projekt-guru/releases/download/v1.6.1/kjbk-projekt-guru-mac-0.1.1.zip) · Intel és Apple Silicon, macOS 14+
+[Mac 0.1.2 letöltése](https://github.com/kobak/kjbk-projekt-guru/releases/download/v1.6.2/kjbk-projekt-guru-mac-0.1.2.zip) · Intel és Apple Silicon, macOS 14+
 
-A 0.1.1 a melléklet- és naptárletöltési hibát javítja. Frissítéshez lépj ki az appból (⌘Q), majd az új példánnyal cseréld le a régit az Alkalmazások mappában. A bejelentkezés és a Mac-beállítások megmaradnak; nincs automatikus frissítés. A webes jelszó-visszaállítás a régi appban is megjelenik, a natív letöltési javításhoz viszont ez az új csomag szükséges.
+A 0.1.2 az új Mac-kiadásokat is jelzi, és tartalmazza a 0.1.1 melléklet- és naptárletöltési javítását. **A 0.1.1 és korábbi appok még nem tudnak frissítést jelezni:** ezt a változatot egyszer kézzel kell telepíteni. Frissítéshez lépj ki az appból (⌘Q), majd az új példánnyal cseréld le a régit az Alkalmazások mappában. A bejelentkezés és a Mac-beállítások megmaradnak.
+
+## Frissítésjelzés
+
+- Alapból automatikusan ellenőriz, induláskor, majd naponta; a sikeres ellenőrzések között legalább 24 óra telik el. A háttérben futó app is ellenőriz, alvás után folytatja. Kikapcsolt app nem tud jelezni.
+- Az új verziót natív ablak jelzi **Letöltés / Újdonságok / Később** gombokkal. Egy adott verzió automatikus ablakát egyszer mutatja; a menüben és a Mac-beállításokban a frissítés utána is elérhető.
+- Ha az app háttérben van, és a natív Mac-értesítések engedélyezettek, rendszerértesítést is küld. Engedély nélkül a következő megnyitáskor az alkalmazáson belül jelez. Az appablakhoz nem kell értesítési engedély.
+- A **kjbk projekt guru → Frissítések keresése…**, a menüsoros GURU-menü és a **Mac-beállítások** bármikor indíthat kézi ellenőrzést. Az automatikus ellenőrzés itt külön kikapcsolható.
+- A letöltést és a telepítést a felhasználó indítja. Nincs automatikus csere vagy újraindítás; a folyamatban levő munka megmarad.
+- Hálózati hiba csendes automatikus újrapróbálást jelent, nem GURU-kapcsolati hibát. Kézi ellenőrzésnél érthető hibaüzenet jelenik meg. A GitHub korlátozása esetén megvárja az újrapróbálási időt.
+
+A nyilvános GitHub-kiadások Mac ZIP-csomagjait ellenőrzi, a webes kiadás verziószámától függetlenül. Előzetes, vázlatos vagy feltöltés alatt álló csomagot nem ajánl fel, és régebbi verzióra nem irányít. A GitHub-kérés nem használ GURU-sütit, jelszót vagy GitHub-tokent. Az elérhető verzió és a jelzés állapota helyi Mac-beállításként tárolódik.
 
 ## Első használat
 
@@ -72,3 +83,24 @@ python3 macos/build.py --development --server-url http://127.0.0.1:8000 --archit
 Az értesítési próbaappot se `/tmp` vagy `/var/folders` alól indítsd: a macOS ott megtagadhatja az értesítési kliens azonosítását. Használj a saját mappádban levő buildkönyvtárat vagy az Alkalmazások mappát.
 
 Legalább GURU **1.4.0** szerver szükséges. Saját telepítéshez a KJBK arculat a [BRANDING.md](../BRANDING.md) szerint cserélendő.
+
+## Új Mac-kiadás közzététele
+
+1. Emeld a `version` és a `CFBundleVersion` értékét a `macos/build.py` fájlban. A Mac-verzió három számból álljon, például `0.1.3`. A webes kiadás ettől eltérő számot kaphat.
+2. Futtasd a `sh macos/test.sh` ellenőrzést és az univerzális `python3 macos/build.py` fordítást. A ZIP-ben a kész `.app`, a licenc és a márkajelzési szabály legyen; ellenőrizd a kicsomagolt app aláírását is.
+3. Készíts nyilvános GitHub-kiadást, először vázlatként. A Mac-csomag neve pontosan `kjbk-projekt-guru-mac-<Mac-verzió>.zip` legyen. Mellékeld a SHA-256 ellenőrzőösszeget és a telepítési leírást.
+4. A sikeres CI és ellenőrzött csomag után publikáld a kiadást **előzetes kiadás jelölés nélkül**. A következő automatikus vagy kézi ellenőrzés felismeri. Egy csak webes kiadás nem számít új Mac-verziónak.
+
+Saját szerverre fordítva alapból nincs kapcsolat a KJBK kiadásaival, így a felhasználó nem kaphat a saját szervere helyett a KJBK-szerverre irányító appot. Saját nyilvános kiadásokhoz:
+
+```sh
+python3 macos/build.py --server-url https://projekt.sajatdomain.hu --update-repository sajatnev/sajatrepo --output macos/build-sajat
+```
+
+A `--update-repository none` a hivatalos szerverhez is letiltja a forrást. A saját kiadásban is a fenti Mac ZIP-névminta szükséges. A forrás csak `owner/repo` alakú lehet, a hivatkozások pedig ugyanannak a GitHub-repónak a HTTPS-oldalára mutathatnak.
+
+Elkülönített ellenőrzéshez a fejlesztői fordítás szimulálhat egy korábbi verziót; a `--test-version` kizárólag `--development` mellett használható:
+
+```sh
+python3 macos/build.py --development --server-url http://127.0.0.1:8000 --update-repository kobak/kjbk-projekt-guru --test-version 0.1.0 --architecture arm64 --output macos/build-update-qa
+```
