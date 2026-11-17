@@ -35,7 +35,9 @@ try:
         "frontend/tests", "frontend/index.html", "frontend/package.json", "frontend/package-lock.json", "frontend/tsconfig.json", "frontend/vite.config.ts",
         "manage.py", "Dockerfile", "compose.yaml", ".env.example", ".gitignore", ".dockerignore", "README.md", "LICENSE", "BRANDING.md",
         "CONTRIBUTING.md", "SECURITY.md", "CHANGELOG.md", "THIRD_PARTY_NOTICES.md", "macos/Sources", "macos/Tests", "macos/build.py", "macos/test.sh", "requirements.txt", "requirements.lock",
-        "requirements-mariadb.txt", "requirements-native.lock", ".github"]
+        "requirements-mariadb.txt", "requirements-native.lock", ".github", "ios/Guru", "ios/Guru.xcconfig", "ios/Guru.entitlements",
+        "ios/Info.plist", "ios/Guru.xcodeproj/project.pbxproj", "ios/Guru.xcodeproj/xcshareddata", "ios/Tests", "ios/UITests",
+        "ios/test-simulator.sh"]
     def source_filter(info):
         return None if "__pycache__" in Path(info.name).parts or info.name.endswith(".pyc") else info
     with tarfile.open(dest / "source.tar.gz", "w:gz") as archive:

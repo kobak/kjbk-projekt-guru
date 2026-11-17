@@ -10,3 +10,4 @@ gunicorn>=25.1,<26
 whitenoise>=6.9,<7
 python-dotenv>=1.1,<2
 jsonschema>=4.25,<5
+httpx[http2]>=0.28,<1

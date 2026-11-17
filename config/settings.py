@@ -117,3 +117,9 @@ OAUTH2_PROVIDER = {
     "COMPLIANT_BCP_RFC9700_IMPLICIT_GRANT": True,
     "COMPLIANT_BCP_RFC9700_ACCESS_TOKEN_TRANSPORT": True,
 }
+
+APNS_TEAM_ID = os.getenv("APNS_TEAM_ID", "")
+APNS_KEY_ID = os.getenv("APNS_KEY_ID", "")
+APNS_KEY_FILE = os.getenv("APNS_KEY_FILE", "")
+APNS_TOPIC = os.getenv("APNS_TOPIC", "com.kjbkinfinity.guru.ios")
+APNS_ENVIRONMENT = os.getenv("APNS_ENVIRONMENT", "sandbox")

@@ -122,4 +122,6 @@ def tick():
             created_at__gte=now-timedelta(days=1), user__is_active=True).order_by("created_at").values_list("id", flat=True)[:50])
         for notification_id in push_ids:
             send_notification_push(notification_id)
+    from .apple_push import deliver_pending
+    deliver_pending()
     RateLimit.objects.filter(started_at__lt=now-timedelta(days=2)).delete()

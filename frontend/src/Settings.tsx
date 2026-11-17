@@ -1,3 +1,4 @@
+import { isMobileApp, mobilePush, mobileStatus } from "./mobile";
 import { useEffect, useState } from "react";
 import {
   BellRing,
@@ -54,6 +55,17 @@ export default function Settings({
     [password, setPassword] = useState(""),
     [current, setCurrent] = useState(""),
     [pushOn, setPushOn] = useState(macNotificationsEnabled);
+  const [appleReady, setAppleReady] = useState(false);
+  useEffect(() => {
+    if (!isMobileApp()) return;
+    let active = true;
+    const refresh = () => mobileStatus().then(status => {
+      if (active) { setPushOn(status.enabled); setAppleReady(status.configured); }
+    }).catch(() => { if (active) setAppleReady(false); });
+    refresh();
+    window.addEventListener("guru-mobile-push", refresh);
+    return () => { active = false; window.removeEventListener("guru-mobile-push", refresh); };
+  }, [data.user.id]);
   const [connections, setConnections] = useState<
     { id: number; name: string }[]
   >([]);
@@ -73,7 +85,7 @@ export default function Settings({
     api<{ connections: typeof connections }>("mcp/connections/")
       .then((r) => setConnections(r.connections))
       .catch(() => {});
-    if (!isMacApp() && "serviceWorker" in navigator)
+    if (!isMobileApp() && !isMacApp() && "serviceWorker" in navigator)
       navigator.serviceWorker
         .getRegistration("/")
         .then((r) => r?.pushManager.getSubscription())
@@ -99,6 +111,7 @@ export default function Settings({
     }
   };
   const push = async () => {
+    if (isMobileApp()) return mobilePush(data.user.id, "toggle");
     if (isMacApp()) {
       macCommand("notifications");
       return;
@@ -334,7 +347,7 @@ export default function Settings({
               <button
                 className="btn secondary"
                 disabled={
-                  busy || (!isMacApp() && !data.integrations.push_configured)
+                  busy || (isMobileApp() ? !appleReady : !isMacApp() && !data.integrations.push_configured)
                 }
                 onClick={() =>
                   isMacApp()
@@ -353,7 +366,9 @@ export default function Settings({
                   : "Értesítések engedélyezése"}
               </button>
               <p className="form-hint">
-                {isMacApp() ? (
+                {isMobileApp() ? (
+                  appleReady ? "Az eseménytípusokat az Értesítések fül Push oszlopában választhatod ki." : "Az Apple push szerverkapcsolata még nincs beállítva. Helyi próbaértesítést az app felső menüjéből kérhetsz."
+                ) : isMacApp() ? (
                   "Az eseménytípusokat az Értesítések fül Push oszlopában állíthatod. A Mac rendszerengedélye és az app kapcsolója is szükséges."
                 ) : (
                   <>

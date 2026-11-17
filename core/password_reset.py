@@ -54,6 +54,8 @@ def confirm_reset(uid, token, password):
     user.save(update_fields=["password"])
     # Password changes invalidate Django session hashes. Old browser push
     # subscriptions must also stop receiving account details.
+    from .models import AppleDevice
+    AppleDevice.objects.filter(user=user).delete()
     PushSubscription.objects.filter(user=user).delete()
     from axes.utils import reset
     reset(username=user.username)

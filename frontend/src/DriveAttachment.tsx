@@ -8,6 +8,7 @@ import {
   showDrivePicker,
 } from "./drivePicker";
 import type { DriveConfig, DriveSelection } from "./drivePicker";
+import { isMobileApp, mobileBrowser } from "./mobile";
 import { isMacApp, macCommand } from "./desktop";
 
 export default function DriveAttachment({
@@ -43,7 +44,7 @@ export default function DriveAttachment({
       picker.current = null;
     };
     const initialize = async () => {
-      if (isMacApp()) {
+      if (isMobileApp() || isMacApp()) {
         setReady(true);
         return;
       }
@@ -133,6 +134,10 @@ export default function DriveAttachment({
         className="btn secondary"
         disabled={!ready || busy || working}
         onClick={() => {
+          if (isMobileApp()) {
+            mobileBrowser(`/?task=${encodeURIComponent(taskId)}&files=1`)?.catch((e) => setError(String(e)));
+            return;
+          }
           if (isMacApp()) {
             macCommand(
               "browser",
@@ -160,14 +165,14 @@ export default function DriveAttachment({
         ) : (
           <HardDrive size={16} />
         )}
-        {isMacApp()
+        {isMacApp() || isMobileApp()
           ? "Drive-fájlválasztás böngészőben"
           : "Kiválasztás a Google Drive-ból"}
       </button>
-      {isMacApp() && (
+      {(isMacApp() || isMobileApp()) && (
         <p className="form-hint">
           A Google-fájlválasztó a rendszer böngészőjében nyílik meg. Csatolás
-          után a Mac-app Frissítés gombjával láthatod a változást.
+          után az app Frissítés gombjával láthatod a változást.
         </p>
       )}
       {configured === false && (
