@@ -69,6 +69,20 @@ class RateLimit(models.Model):
     count = models.PositiveIntegerField(default=0)
     started_at = models.DateTimeField()
 
+class PasswordResetDelivery(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    email = models.EmailField()
+    security_state = models.CharField(max_length=64)
+    created_at = models.DateTimeField(auto_now_add=True)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    next_attempt_at = models.DateTimeField(null=True, blank=True)
+    finished = models.BooleanField(default=False)
+    sent_at = models.DateTimeField(null=True, blank=True)
+    error = models.CharField(max_length=120, blank=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["finished", "next_attempt_at"], name="password_reset_pending")]
+
 class Invite(models.Model):
     email = models.EmailField()
     token_hash = models.CharField(max_length=64, unique=True)

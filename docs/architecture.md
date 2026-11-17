@@ -12,6 +12,7 @@
 | `core/calendar.py` | Google-események, `.ics` és kézi Google-link; a frissítőtoken titkosítása |
 | `core/appearance.py`, `core/list_order.py` | Személyes nézet, megjelenés, készfeladat-láthatóság és saját, verziózott kézi sorrend |
 | `core/notifications.py`, `core/worker.py` | Személyes csatornaválasztások, határidőjelzések, küldési sor és újrapróbálás |
+| `core/password_reset.py` | Django egyszer használható jelszótokenek és elkülönített levélküldési sor |
 | `templates/` | OAuth-belépés/jóváhagyás és e-mail-sablonok |
 | `config/` | Django-beállítások és útvonalak |
 | `deploy/`, `scripts/` | Telepítési példák, kulcsgenerálás, mentés |
@@ -35,6 +36,10 @@ A készre jelölés Visszavonás gombja 5 másodpercig él, és a mentés válas
 Az `Attachment` feltöltött fájlt vagy Drive-hivatkozást jelöl. A forrást adatbázis-kényszer ellenőrzi. A Drive-azonosító SHA-256 lenyomata feladatonként egyedi; ez a kis-/nagybetűre érzéketlen MariaDB-kolláció mellett is helyesen különbözteti meg az azonosítókat. A Google Picker `drive.file` engedélyt kér a felhasználó saját fiókjához. A rövid életű token kizárólag memóriában él, a szerver csak a kiválasztott fájl metaadatait ellenőrzi vele a Drive API-n; fájltartalmat, frissítőtokent vagy teljes Drive-listát nem ment. A név pillanatkép, a megnyitott dokumentum tartalma mindig a Drive-on elérhető változat. A GURU nem módosít Drive-megosztást és nem töröl Google-fájlt. A Naptár külön, titkosított felhasználói frissítőtokent használ.
 
 ## Hozzáférés
+
+A jelszó-visszaállítást Django `PasswordResetTokenGenerator` hitelesíti, a felhasználó zárolása mellett. A link fragmentuma nem jut a szerver hozzáférési naplójába, és a hivatkozás az ellenőrzött `APP_URL` értékből készül. Lejárat, jelszócsere, belépés vagy e-mail-csere érvényteleníti a tokent; letiltott fióknál sem használható. A kérés IP és hash-elt cím szerint korlátozott, az SMTP-küldés nem befolyásolja a kérés válaszidejét. A sorban tárolt biztonsági állapot lenyomata megakadályozza a már megváltozott fiókhoz tartozó kérés utólagos kiküldését.
+
+Az `ActiveSessionMiddleware` a sikeres, hitelesített `/api/session/` és `/api/bootstrap/` lekérésnél legfeljebb óránként módosítja a munkamenetet. A Django normál adatbázisos mentése megújítja a sütit, az azonosító forgatása nélkül. Az alkalmazás rejtett lapja nem kér rendszeres bootstrap-frissítést, a natív háttérvégpont pedig nem újít munkamenetet.
 
 A normál API Django-munkamenetet és íráskor CSRF-ellenőrzést használ. A meghívó egyszer használható, időkorlátos, az adatbázisban hashként tárolt token. Az admin meghívhat és letilthat csapattagokat; minden aktív tag hozzáfér a közös projektekhez.
 

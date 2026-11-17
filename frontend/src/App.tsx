@@ -37,6 +37,7 @@ import {
   Undo2,
 } from "lucide-react";
 import { api, ApiError, today, dayLabel, relative, isOverdue } from "./api";
+import { PasswordRecovery, isRecoveryLink } from "./PasswordRecovery";
 import type {
   Appearance,
   Bootstrap,
@@ -73,14 +74,18 @@ type ToastMessage = {
   busy?: boolean;
 };
 
-async function pushSubscriptionForLogout(): Promise<PushSubscription | undefined> {
+async function pushSubscriptionForLogout(): Promise<
+  PushSubscription | undefined
+> {
   if (!("serviceWorker" in navigator)) return;
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     return await Promise.race([
       (async () => {
         const registration = await navigator.serviceWorker.getRegistration("/");
-        return (await registration?.pushManager?.getSubscription()) ?? undefined;
+        return (
+          (await registration?.pushManager?.getSubscription()) ?? undefined
+        );
       })(),
       new Promise<undefined>((resolve) => {
         timer = setTimeout(resolve, 1000);
@@ -95,6 +100,7 @@ async function pushSubscriptionForLogout(): Promise<PushSubscription | undefined
 
 function Login({ onLogin }: { onLogin: () => void }) {
   const token = new URLSearchParams(location.search).get("invite");
+  const [recovery, setRecovery] = useState(isRecoveryLink);
   const [email, setEmail] = useState(""),
     [password, setPassword] = useState(""),
     [name, setName] = useState(""),
@@ -153,89 +159,124 @@ function Login({ onLogin }: { onLogin: () => void }) {
       <div className="auth-form-wrap">
         <div className="auth-form">
           <span className="eyebrow">A MI MUNKATERÜNK</span>
-          <h2>{token ? "Jó, hogy csatlakozol." : "Szia, jó újra itt."}</h2>
-          <p>
-            {token
-              ? "Hozd létre a fiókodat a közös munkatérhez."
-              : "Lépj be, és folytassuk, ahol abbahagytuk."}
-          </p>
-          {error && (
-            <div className="error-banner" role="alert">
-              {error}
-            </div>
-          )}
-          <form
-            onSubmit={async (e) => {
-              e.preventDefault();
-              setBusy(true);
-              setError("");
-              try {
-                await api(
-                  token ? "invite/accept/" : "login/",
-                  "POST",
-                  token ? { token, name, password } : { email, password },
+          {recovery ? (
+            <PasswordRecovery
+              onBack={() => {
+                history.replaceState(
+                  null,
+                  "",
+                  location.pathname + location.search,
                 );
-                if (token) history.replaceState(null, "", "/");
+                setRecovery(false);
                 onLogin();
-              } catch (err) {
-                setError((err as Error).message);
-              } finally {
-                setBusy(false);
-              }
-            }}
-          >
-            {token && (
-              <label>
-                Neved
-                <input
-                  autoComplete="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                  autoFocus
-                  maxLength={100}
-                />
-              </label>
-            )}
-            <label>
-              E-mail-cím
-              <input
-                type="email"
-                autoComplete="username"
-                placeholder="nev@email.hu"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                readOnly={!!token}
-                autoFocus={!token}
-              />
-            </label>
-            <label>
-              Jelszó
-              <input
-                type="password"
-                autoComplete={token ? "new-password" : "current-password"}
-                placeholder={token ? "Legalább 10 karakter" : "A jelszavad"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={token ? 10 : undefined}
-              />
-            </label>
-            <button
-              className="btn primary full"
-              disabled={busy || !validInvite}
-            >
-              {busy ? <LoaderCircle size={17} className="spin" /> : null}
-              {token ? "Csatlakozás a csapathoz" : "Belépés a munkatérbe"}
-              <ArrowRight size={17} />
-            </button>
-          </form>
-          <p className="login-note">
-            {token
-              ? "A meghívóval az összes közös projekthez hozzáférsz."
-              : "Meghívásos munkatér. Új fiókhoz kérj meghívót az adminisztrátortól."}
-          </p>
+              }}
+            />
+          ) : (
+            <>
+              <h2>{token ? "Jó, hogy csatlakozol." : "Szia, jó újra itt."}</h2>
+              <p>
+                {token
+                  ? "Hozd létre a fiókodat a közös munkatérhez."
+                  : "Lépj be, és folytassuk, ahol abbahagytuk."}
+              </p>
+              {error && (
+                <div className="error-banner" role="alert">
+                  {error}
+                </div>
+              )}
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  setBusy(true);
+                  setError("");
+                  try {
+                    await api(
+                      token ? "invite/accept/" : "login/",
+                      "POST",
+                      token ? { token, name, password } : { email, password },
+                    );
+                    if (token) history.replaceState(null, "", "/");
+                    onLogin();
+                  } catch (err) {
+                    setError((err as Error).message);
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              >
+                {token && (
+                  <label>
+                    Neved
+                    <input
+                      autoComplete="name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      required
+                      autoFocus
+                      maxLength={100}
+                    />
+                  </label>
+                )}
+                <label>
+                  E-mail-cím
+                  <input
+                    type="email"
+                    name="username"
+                    autoComplete="username"
+                    placeholder="nev@email.hu"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    readOnly={!!token}
+                    autoFocus={!token}
+                  />
+                </label>
+                <label>
+                  Jelszó
+                  <input
+                    type="password"
+                    name="password"
+                    autoComplete={token ? "new-password" : "current-password"}
+                    placeholder={token ? "Legalább 10 karakter" : "A jelszavad"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    minLength={token ? 10 : undefined}
+                  />
+                </label>
+                <button
+                  className="btn primary full"
+                  disabled={busy || !validInvite}
+                >
+                  {busy ? <LoaderCircle size={17} className="spin" /> : null}
+                  {token ? "Csatlakozás a csapathoz" : "Belépés a munkatérbe"}
+                  <ArrowRight size={17} />
+                </button>
+              </form>
+              {!token && (
+                <button
+                  type="button"
+                  className="btn full"
+                  onClick={() => {
+                    setError("");
+                    history.replaceState(
+                      null,
+                      "",
+                      location.pathname + "#forgot-password",
+                    );
+                    setRecovery(true);
+                  }}
+                >
+                  Elfelejtettem a jelszavam
+                </button>
+              )}
+              <p className="login-note">
+                {token
+                  ? "A meghívóval az összes közös projekthez hozzáférsz."
+                  : "Meghívásos munkatér. Új fiókhoz kérj meghívót az adminisztrátortól."}
+              </p>
+            </>
+          )}
         </div>
         <span className="auth-footer">Kevesebb keresgélés. Több haladás.</span>
       </div>
@@ -244,6 +285,14 @@ function Login({ onLogin }: { onLogin: () => void }) {
 }
 
 export default function App() {
+  const [recoveryVersion, setRecoveryVersion] = useState(0);
+  useEffect(() => {
+    // An incoming email link starts a fresh flow, even when our previous
+    // form removed its own fragment with replaceState after submission.
+    const changed = () => setRecoveryVersion((version) => version + 1);
+    window.addEventListener("hashchange", changed);
+    return () => window.removeEventListener("hashchange", changed);
+  }, []);
   const appearance = useAppearance();
   const [session, setSession] = useState<Member | null | undefined>(undefined),
     [data, setData] = useState<Bootstrap | null>(null),
@@ -595,7 +644,8 @@ export default function App() {
         <p>Minden a helyére kerül…</p>
       </div>
     );
-  if (!session || !data) return <Login onLogin={() => loadSession()} />;
+  if (!session || !data || isRecoveryLink())
+    return <Login key={recoveryVersion} onLogin={() => loadSession()} />;
   const open = activeTasks.filter((t) => t.status !== "done"),
     dueToday = open.filter((t) => t.due_date === today()),
     overdue = open.filter(isOverdue),
@@ -1182,8 +1232,9 @@ export default function App() {
                               />
                               {t.project_id === null
                                 ? "Privát teendő"
-                                : data.projects.find((p) => p.id === t.project_id)
-                                    ?.name}
+                                : data.projects.find(
+                                    (p) => p.id === t.project_id,
+                                  )?.name}
                             </span>
                           </button>
                           <span
@@ -1737,7 +1788,9 @@ export default function App() {
             try {
               const sub = await pushSubscriptionForLogout();
               await api("logout/", "POST", { push_endpoint: sub?.endpoint });
-              void Promise.resolve().then(() => sub?.unsubscribe()).catch(() => {});
+              void Promise.resolve()
+                .then(() => sub?.unsubscribe())
+                .catch(() => {});
               bootstrapSequence.current++;
               resetAppearance();
               setSettingsOpen(false);

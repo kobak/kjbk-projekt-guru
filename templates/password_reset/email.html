@@ -1,0 +1,9 @@
+<!doctype html><html lang="hu"><body style="font-family:Arial,sans-serif;color:#252525;line-height:1.6">
+<h1 style="font-size:24px">GURU · Jelszó-visszaállítás</h1>
+<p>Szia{% if name %}, {{ name }}{% endif %}!</p>
+<p>Új jelszót kértél a kjbk projekt guru fiókodhoz.</p>
+<p><a href="{{ reset_url }}" style="display:inline-block;padding:12px 20px;background:#462773;color:#fff;border-radius:8px;text-decoration:none">Új jelszó beállítása</a></p>
+<p>A link egyszer használható, és {{ minutes }} percig érvényes.</p>
+<p>Ha nem te kérted, nincs teendőd: a jelszavad változatlan marad.</p>
+<p>Ha a gomb nem működik, másold a böngészőbe ezt a címet:<br>{{ reset_url }}</p>
+</body></html>

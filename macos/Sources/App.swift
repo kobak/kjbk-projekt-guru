@@ -197,7 +197,7 @@ final class GuruApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNaviga
         Task { await notifications.updatePermission(); await notifications.poll() }
     }
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-        guard (error as NSError).code != NSURLErrorCancelled else { return }
+        guard NavigationFailurePolicy.shouldReport(error) else { return }
         let alert = NSAlert()
         alert.messageText = "A GURU most nem érhető el"
         alert.informativeText = "Ellenőrizd az internetkapcsolatot. A Frissítés (⌘R) gombbal újrapróbálhatod."
@@ -211,7 +211,7 @@ final class GuruApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNaviga
                 NSWorkspace.shared.open(policy.localURL("/?settings=1")!)
                 returnURL = policy.localURL("/?settings=1")
                 decisionHandler(.cancel)
-            } else if navigationAction.shouldPerformDownload { decisionHandler(.download) }
+            } else if navigationAction.shouldPerformDownload || policy.isDownload(url) { decisionHandler(.download) }
             else { decisionHandler(.allow) }
         } else {
             // Only user-initiated external links may open another application.
@@ -231,7 +231,14 @@ final class GuruApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNaviga
         for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
         if let url = navigationAction.request.url, navigationAction.navigationType == .linkActivated,
            ["https", "http"].contains(url.scheme ?? "") {
-            if policy.isOwn(url) { web.load(URLRequest(url: url)) }
+            if policy.isDownload(url) {
+                // A target=_blank attachment must not replace the app's page.
+                webView.startDownload(using: navigationAction.request) { download in
+                    self.downloads.append(download)
+                    download.delegate = self
+                }
+            }
+            else if policy.isOwn(url) { web.load(navigationAction.request) }
             else { NSWorkspace.shared.open(url) }
         }
         return nil
@@ -286,6 +293,11 @@ final class GuruApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNaviga
     func downloadDidFinish(_ download: WKDownload) { downloads.removeAll { $0 === download } }
     func download(_ download: WKDownload, didFailWithError error: Error, resumeData: Data?) {
         downloads.removeAll { $0 === download }
+        guard !NavigationFailurePolicy.isCancellation(error) else { return }
+        let alert = NSAlert()
+        alert.messageText = "A fájl letöltése nem sikerült"
+        alert.informativeText = "A GURU-t tovább használhatod. Ellenőrizd az internetkapcsolatot, majd próbáld újra a letöltést."
+        alert.beginSheetModal(for: window)
     }
 }
 

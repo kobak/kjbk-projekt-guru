@@ -12,6 +12,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
+from django.core.validators import validate_email
 from django.db import transaction
 from django.db.models import Q
 from django.http import JsonResponse, HttpResponse, FileResponse
@@ -67,6 +68,21 @@ def api(methods=("GET",), admin=False, anonymous=False):
 def session(request):
     return {"user": person(request.user) if request.user.is_authenticated else None, "csrf": get_token(request),
         "appearance": appearance_json(request.user)}
+
+@api(("POST",), anonymous=True)
+def password_reset_request(request):
+    from .password_reset import request_reset
+    email = text(request.data, "email", 254, True).lower()
+    validate_email(email)
+    return request_reset(email, request.META.get("REMOTE_ADDR", ""))
+
+@api(("POST",), anonymous=True)
+def password_reset_confirm(request):
+    from .password_reset import confirm_reset
+    from .ratelimit import allow
+    if not allow("password-reset-confirm:" + request.META.get("REMOTE_ADDR", ""), 30, 3600):
+        raise Problem("Túl sok kérés. Próbáld újra egy óra múlva.", 429)
+    return confirm_reset(text(request.data, "uid", 64, True), text(request.data, "token", 128, True), password_text(request.data))
 
 @api(("GET", "PATCH"))
 def appearance(request):

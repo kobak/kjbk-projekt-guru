@@ -1,6 +1,25 @@
 from django.conf import settings
 from django.http import JsonResponse
 import ipaddress
+import time
+
+class ActiveSessionMiddleware:
+    """Renew the existing login on visible app activity, at most once an hour.
+
+    Native background notification polling deliberately cannot keep an unused
+    account signed in. Session keys stay stable for the native cookie bridge.
+    """
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        response = self.get_response(request)
+        if (request.method == "GET" and request.path in ("/api/session/", "/api/bootstrap/")
+                and 200 <= response.status_code < 300 and request.user.is_authenticated):
+            now = int(time.time())
+            if now - request.session.get("_guru_active_at", 0) >= 3600:
+                request.session["_guru_active_at"] = now
+        return response
 
 class TrustedProxyMiddleware:
     """Apache appends the actual client to X-Forwarded-For; accept only its last hop on loopback."""

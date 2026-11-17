@@ -117,4 +117,12 @@ sudo -u kozos /opt/kozos/.venv/bin/python /opt/kozos/manage.py check --deploy
 
 A HSTS aldomain/preload opciói nincsenek bekapcsolva, mert ugyanazon domainen más szolgáltatások is lehetnek. A Django erre figyelmeztethet; csak akkor módosítsd, ha az összes érintett aldomain HTTPS-üzemét biztosítani tudod.
 
-Elfelejtett jelszóhoz a szerver adminja futtathatja a `manage.py changepassword felhasznalo@example.com` parancsot az adott környezetben. Ez interaktív; ne adj jelszót parancssori argumentumban vagy issue-ban.
+## Elfelejtett jelszó és bejelentkezés
+
+A belépőképernyő **Elfelejtettem a jelszavam** gombja a fiók tárolt e-mail-címére küld egyszer használható visszaállító linket. A link 60 percig érvényes; a kéretlen levél önmagában nem változtat jelszót. A visszaállítás nem jelentkeztet be automatikusan. Siker után a régi böngészős/Mac-munkamenetekkel újra be kell lépni, és a webes push-t a Beállításokban újra engedélyezni kell. A feladatok, Google- és MCP-kapcsolatok megmaradnak.
+
+Ehhez a szokásos `EMAIL_*` SMTP-beállítások, `DEFAULT_FROM_EMAIL`, a helyes HTTPS `APP_URL` és a futó **worker** szükséges. A jelszólevél a feladatértesítések kapcsolójától és a személyes értesítési beállításoktól független. A worker legfeljebb háromszor próbálkozik; a hiba naplózása nem tartalmaz SMTP-titkot, címet vagy visszaállító linket. A kérési sor nem tárol nyers tokent. A régi sorbejegyzések 30 nap után törlődnek. A `0012_password_reset_delivery` migráció szükséges.
+
+A bejelentkezés 14 napig tart, és az aktív felület óránként meghosszabbítja. A kizárólag háttérben futó Mac-értesítésellenőrzés nem újítja meg. Kijelentkezést, jelszóváltozást, letiltást vagy már lejárt munkamenetet nem lehet ezzel megkerülni.
+
+Ha az SMTP nem használható, végső adminisztrátori megoldás a `manage.py changepassword felhasznalo@example.com` interaktív parancs. Ne adj jelszót parancssori argumentumban vagy issue-ban.

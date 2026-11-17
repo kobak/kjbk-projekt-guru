@@ -1,6 +1,10 @@
 # GURU Mac-alkalmazás
 
-A Mac 0.1.0 a megszokott GURU-felületet natív AppKit-ablakban jeleníti meg. Natív eszköztár, menük, fájlválasztó, mentési ablak, rendszerértesítések, menüsoros elérés és Dock-jelvény egészíti ki. Ugyanazt a szervert és fiókot használja, mint a web; helyi feladat-adatbázist nem hoz létre.
+A Mac 0.1.1 a megszokott GURU-felületet natív AppKit-ablakban jeleníti meg. Natív eszköztár, menük, fájlválasztó, mentési ablak, rendszerértesítések, menüsoros elérés és Dock-jelvény egészíti ki. Ugyanazt a szervert és fiókot használja, mint a web; helyi feladat-adatbázist nem hoz létre.
+
+[Mac 0.1.1 letöltése](https://github.com/kobak/kjbk-projekt-guru/releases/download/v1.6.1/kjbk-projekt-guru-mac-0.1.1.zip) · Intel és Apple Silicon, macOS 14+
+
+A 0.1.1 a melléklet- és naptárletöltési hibát javítja. Frissítéshez lépj ki az appból (⌘Q), majd az új példánnyal cseréld le a régit az Alkalmazások mappában. A bejelentkezés és a Mac-beállítások megmaradnak; nincs automatikus frissítés. A webes jelszó-visszaállítás a régi appban is megjelenik, a natív letöltési javításhoz viszont ez az új csomag szükséges.
 
 ## Első használat
 

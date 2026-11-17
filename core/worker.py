@@ -92,6 +92,8 @@ def send_notification_push(notification_id):
 
 
 def tick():
+    from .password_reset import deliver_pending_resets
+    deliver_pending_resets()
     now = timezone.now()
     local_today = timezone.localdate(now)
     for t in Task.objects.not_archived().filter(deleted=False, assignee__is_active=True,

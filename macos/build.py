@@ -63,7 +63,7 @@ with tempfile.TemporaryDirectory(prefix="guru-mac-build-") as staging:
     subprocess.run(["iconutil", "-c", "icns", str(iconset), "-o", str(resources / "Guru.icns")], check=True)
     info = {"CFBundleIdentifier": "com.kjbkinfinity.guru.mac" + (".qa" if args.development else ""),
         "CFBundleExecutable": "Guru", "CFBundleName": name, "CFBundleDisplayName": name,
-        "CFBundlePackageType": "APPL", "CFBundleShortVersionString": "0.1.0", "CFBundleVersion": "1",
+        "CFBundlePackageType": "APPL", "CFBundleShortVersionString": "0.1.1", "CFBundleVersion": "2",
         "CFBundleIconFile": "Guru", "LSMinimumSystemVersion": "14.0", "NSPrincipalClass": "NSApplication",
         "NSHighResolutionCapable": True, "NSSupportsAutomaticGraphicsSwitching": True,
         "NSHumanReadableCopyright": "KJBK Infinity Kft. · MIT licence; branding: see BRANDING.md",
