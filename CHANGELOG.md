@@ -1,5 +1,11 @@
 # Változásnapló
 
+## 1.6.2 — 2026-11-17
+
+- Mac 0.1.2: automatikus, napi frissítésellenőrzés; új kiadásnál natív jelzés és Letöltés / Újdonságok / Később gombok. Kézi ellenőrzés a Mac-menüből, a menüsorból és a Mac-beállításokból; külön automatikus kapcsoló.
+- A Mac-csomag verziója dönt, a webes kiadásé nem. Vázlatos, előzetes és idegen címre mutató csomag nem ajánlható fel; a GitHub-kérés nem küld fiókadatot vagy GURU-sütit. Hálózati hiba és korlátozás kezelése csendes, a korábban elérhető letöltés megmarad.
+- Saját szerverhez készült app alapból nem ajánl KJBK-szerverhez kötött binárist; saját kiadási repó megadható. A webes felület és az adatbázis változatlan, szerverfrissítés nem szükséges.
+
 ## 1.6.1 — 2026-11-17
 
 - E-mailes jelszó-visszaállítás a webes és Mac-belépésből: egyszer használható, egyórás link; háttérben küldött levél, újrapróbálás, kéréskorlátozás és fióklétezést el nem áruló válasz. Sikeres visszaállítás után a korábbi munkamenetek és böngészős push-feliratkozások érvénytelenek.

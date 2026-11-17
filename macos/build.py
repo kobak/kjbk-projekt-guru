@@ -3,6 +3,7 @@
 import argparse
 import os
 import plistlib
+import re
 import shutil
 import subprocess
 import tempfile
@@ -16,12 +17,26 @@ parser.add_argument("--server-url", default="https://a.kjbk.hu")
 parser.add_argument("--output", type=Path, default=ROOT / "build")
 parser.add_argument("--development", action="store_true", help="Allow HTTP only on localhost; use a separate app identity")
 parser.add_argument("--architecture", choices=("universal", "arm64", "x86_64"), default="universal")
+parser.add_argument("--update-repository", help="Public owner/repo with Mac release assets; 'none' disables checks")
+parser.add_argument("--test-version", help="Override the installed version only in an isolated --development build")
 args = parser.parse_args()
+version = "0.1.2"
+if args.test_version:
+    if not args.development or not re.fullmatch(r"[0-9]{1,5}\.[0-9]{1,5}\.[0-9]{1,5}", args.test_version):
+        parser.error("--test-version requires --development and a numeric three-part version.")
+    version = args.test_version
 url = urlsplit(args.server_url)
 if (url.username or url.password or url.query or url.fragment or url.path not in ("", "/") or not url.hostname
         or not (url.scheme == "https" or args.development and url.scheme == "http" and url.hostname in ("localhost", "127.0.0.1", "::1"))):
     parser.error("Use an HTTPS origin, or loopback HTTP with --development.")
 server = args.server_url.rstrip("/")
+update_repository = args.update_repository
+if update_repository is None and server == "https://a.kjbk.hu" and not args.development:
+    update_repository = "kobak/kjbk-projekt-guru"
+if update_repository == "none": update_repository = None
+if update_repository is not None and (not re.fullmatch(r"[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}", update_repository)
+        or any(part in (".", "..") for part in update_repository.split("/"))):
+    parser.error("--update-repository must be owner/repo, or 'none'.")
 args.output.mkdir(parents=True, exist_ok=True)
 name = "kjbk projekt guru" + (" QA" if args.development else "")
 app = args.output / (name + ".app")
@@ -63,11 +78,12 @@ with tempfile.TemporaryDirectory(prefix="guru-mac-build-") as staging:
     subprocess.run(["iconutil", "-c", "icns", str(iconset), "-o", str(resources / "Guru.icns")], check=True)
     info = {"CFBundleIdentifier": "com.kjbkinfinity.guru.mac" + (".qa" if args.development else ""),
         "CFBundleExecutable": "Guru", "CFBundleName": name, "CFBundleDisplayName": name,
-        "CFBundlePackageType": "APPL", "CFBundleShortVersionString": "0.1.1", "CFBundleVersion": "2",
+        "CFBundlePackageType": "APPL", "CFBundleShortVersionString": version, "CFBundleVersion": "3",
         "CFBundleIconFile": "Guru", "LSMinimumSystemVersion": "14.0", "NSPrincipalClass": "NSApplication",
         "NSHighResolutionCapable": True, "NSSupportsAutomaticGraphicsSwitching": True,
         "NSHumanReadableCopyright": "KJBK Infinity Kft. · MIT licence; branding: see BRANDING.md",
         "GURUServerURL": server, "GURUDevelopment": args.development}
+    if update_repository: info["GURUUpdateRepository"] = update_repository
     if args.development:
         info["NSAppTransportSecurity"] = {"NSAllowsLocalNetworking": True}
     (contents / "Info.plist").write_bytes(plistlib.dumps(info))
