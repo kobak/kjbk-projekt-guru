@@ -83,7 +83,7 @@ export default function CommentComposer({
       className="comment-compose"
       onSubmit={(event) => {
         event.preventDefault();
-        onSubmit();
+        if (!busy && body.trim()) onSubmit();
       }}
     >
       <div className="mention-editor">
@@ -112,7 +112,13 @@ export default function CommentComposer({
           onSelect={(event) => setCaret(event.currentTarget.selectionStart)}
           onBlur={() => setDismissed(true)}
           onKeyDown={(event) => {
-            if (!query || event.nativeEvent.isComposing) return;
+            if (event.nativeEvent.isComposing) return;
+            if (event.key === "Enter" && event.metaKey) {
+              event.preventDefault();
+              if (!event.repeat) event.currentTarget.form?.requestSubmit();
+              return;
+            }
+            if (!query) return;
             if (event.key === "Escape") {
               event.preventDefault();
               event.stopPropagation();
@@ -179,7 +185,12 @@ export default function CommentComposer({
       )}
       <div className="comment-compose-footer">
         <span id={`${id}-help`}>@ után válassz a csapattagok közül.</span>
-        <button className="btn primary" disabled={busy || !body.trim()}>
+        <button
+          className="btn primary"
+          disabled={busy || !body.trim()}
+          aria-keyshortcuts="Meta+Enter"
+          title="Küldés (⌘ Enter)"
+        >
           <Send size={16} />
           Küldés
         </button>
