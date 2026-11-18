@@ -23,14 +23,15 @@ final class GuruUITests: XCTestCase {
         let workspace = app.webViews.firstMatch
         let login = workspace.buttons["Belépés a munkatérbe"]
         let newTask = workspace.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Új feladat")).firstMatch
-        if login.waitForExistence(timeout: 8) {
-            workspace.textFields.firstMatch.tap()
-            workspace.textFields.firstMatch.typeText("demo@kozos.local")
-            let password = workspace.secureTextFields.firstMatch
-            password.tap()
-            password.typeText("Kozos-demo-2026!\n")
-        }
-        XCTAssertTrue(newTask.waitForExistence(timeout: 20), app.debugDescription)
+        // A fresh demo database always requires login. WebKit can take tens of seconds
+        // to start on a newly booted hosted simulator.
+        guard login.waitForExistence(timeout: 90) else { XCTFail(app.debugDescription); return }
+        workspace.textFields.firstMatch.tap()
+        workspace.textFields.firstMatch.typeText("demo@kozos.local")
+        let password = workspace.secureTextFields.firstMatch
+        password.tap()
+        password.typeText("Kozos-demo-2026!\n")
+        guard newTask.waitForExistence(timeout: 60) else { XCTFail(app.debugDescription); return }
         let shot = XCTAttachment(screenshot: app.screenshot())
         shot.name = "GURU munkatér"
         shot.lifetime = .keepAlways

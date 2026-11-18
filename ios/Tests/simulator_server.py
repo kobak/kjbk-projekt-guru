@@ -44,7 +44,7 @@ with tempfile.TemporaryDirectory(prefix="guru-ios-") as temp:
                 return
             result = subprocess.run(["xcrun", "simctl", "push", device, "com.kjbkinfinity.guru.ios", "-"],
                 input=json.dumps({"aps": {"alert": {"title": "GURU távoli próba", "body": "Feladat megnyitása"}, "sound": "default"},
-                                  "task_id": task_id}), text=True, timeout=15)
+                                  "task_id": task_id}), text=True, timeout=45)
             self.send_response(200 if result.returncode == 0 else 502)
             self.end_headers()
     helper = HTTPServer(("127.0.0.1", 8022), PushHandler)
