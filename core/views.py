@@ -309,6 +309,11 @@ def read_notifications(request):
     qs.update(read=True)
     return {"ok": True}
 
+@api(("GET", "POST", "DELETE"))
+def apple_device(request):
+    from .apple_push import device_settings
+    return device_settings(request)
+
 @api(("POST", "DELETE"))
 def push_subscription(request):
     endpoint = request.data.get("endpoint", "")
@@ -430,6 +435,8 @@ def deactivate_member(request, user_id):
         raise Problem("Másik adminisztrátort csak a szerver adminfelületén lehet kikapcsolni.")
     u.is_active = False
     u.save(update_fields=["is_active"])
+    from .models import AppleDevice
+    AppleDevice.objects.filter(user=u).delete()
     PushSubscription.objects.filter(user=u).delete()
     connection = GoogleConnection.objects.select_for_update().filter(user=u).first()
     unlink_calendar(CalendarLink.objects.filter(user=u), leave_events=True)

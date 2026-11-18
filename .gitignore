@@ -29,3 +29,7 @@ privat-mentes/
 privat-kulcsok/
 macos/build*/
 macos/.build/
+ios/build*/
+xcuserdata/
+*.p8
+*.mobileprovision

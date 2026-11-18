@@ -2,13 +2,6 @@ type MacState = { notificationsEnabled: boolean };
 declare global {
   interface Window {
     guruMac?: MacState;
-    webkit?: {
-      messageHandlers?: {
-        guruMac?: {
-          postMessage: (message: { command: string; path?: string }) => void;
-        };
-      };
-    };
   }
 }
 export const isMacApp = () =>

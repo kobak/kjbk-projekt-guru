@@ -26,6 +26,7 @@ Magyar nyelvű, saját szerveren futtatható projektkezelő 3–5 fős csapatokn
 - Google Drive-fájlválasztó: mindenki a saját Google-fiókjából csatolhat fájlhivatkozást, külön feltöltés nélkül. A hozzáférést továbbra is a Drive szabályozza; a GURU-ba csak a név és a hivatkozás kerül.
 - Személyes Google Naptár-kapcsolat: a felhasználó a saját naptárába teheti a feladat határidejét. OAuth nélkül előre kitöltött Google-esemény és `.ics` letöltés is elérhető.
 - Alkalmazáson belüli, e-mailes és Web Push értesítések. Hat eseménytípus, személyenként külön e-mail- és push-beállításokkal, az @említéseket is beleértve.
+- [iPhone- és iPad-alkalmazás](docs/ios-app.md) fejlesztői próbához, natív értesítésekkel és feladatmegnyitással.
 - [Mac-alkalmazás](docs/mac-app.md): a megszokott felület natív ablakkal, eszköztárral, menüsorral, Dock-jelvénnyel és háttérben működő rendszerértesítésekkel. Az első változat az Apple-jóváhagyás előtti belső tesztelésre készült.
 - Világos, sötét és rendszer szerinti megjelenés, fiókonként mentve.
 - Személyes Lista/Kanban alapnézet, kész feladatok megjegyzett láthatósága és mentett listarendezés. Alapból Lista, rejtett kész feladatok és növekvő határidő, a dátum nélküliek a végén.

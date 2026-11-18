@@ -258,3 +258,22 @@ class Activity(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     class Meta:
         ordering = ["-created_at"]
+
+
+class AppleDevice(models.Model):
+    # Django flushes this session on logout; its cascade also removes queued deliveries.
+    session = models.OneToOneField("sessions.Session", on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    token = models.CharField(max_length=256, unique=True)
+    environment = models.CharField(max_length=12)
+
+
+class AppleDelivery(models.Model):
+    device = models.ForeignKey(AppleDevice, on_delete=models.CASCADE)
+    notification = models.ForeignKey(Notification, on_delete=models.CASCADE)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    next_attempt_at = models.DateTimeField()
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["device", "notification"], name="apple_notice_per_device")]
+        indexes = [models.Index(fields=["next_attempt_at"], name="apple_delivery_due")]

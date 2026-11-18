@@ -1,5 +1,6 @@
 import re
 from datetime import date, time
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.db import transaction
 from django.db.models import Prefetch
@@ -60,6 +61,7 @@ def password_text(data, key="password"):
         raise Problem("Adj meg egy érvényes jelszót.")
     return value
 
+@transaction.atomic
 def notify(user_id, task, title, body="", key=None, *, kind=Notification.Kind.LEGACY):
     if not user_id or (task.project_id is None and user_id != task.created_by_id):
         return
@@ -67,9 +69,18 @@ def notify(user_id, task, title, body="", key=None, *, kind=Notification.Kind.LE
     values = {"user_id": user_id, "task": task, "title": title[:250], "body": body[:500], "kind": kind,
         "push_pending": kind in push_events, "email_pending": email_configured() and kind in email_events}
     if key:
-        Notification.objects.get_or_create(dedupe_key=key, defaults=values)
+        notice, created = Notification.objects.get_or_create(dedupe_key=key, defaults=values)
+        if not created:
+            return
     else:
-        Notification.objects.create(**values)
+        notice = Notification.objects.create(**values)
+    if values["push_pending"] and settings.APNS_KEY_FILE:
+        from .models import AppleDelivery, AppleDevice
+        devices = AppleDevice.objects.select_for_update().filter(user_id=user_id, environment=settings.APNS_ENVIRONMENT).order_by("pk")
+        AppleDelivery.objects.bulk_create([
+            AppleDelivery(device_id=pk, notification=notice, next_attempt_at=notice.created_at)
+            for pk in devices.values_list("pk", flat=True)
+        ])
 
 def activity(user, task, message):
     Activity.objects.create(user=user, task=task, text=message[:300])

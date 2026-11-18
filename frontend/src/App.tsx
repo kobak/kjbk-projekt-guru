@@ -1,3 +1,4 @@
+import { isMobileApp, mobilePush } from "./mobile";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
@@ -418,6 +419,13 @@ export default function App() {
   useEffect(() => {
     loadSession();
   }, [loadSession]);
+  useEffect(() => {
+    if (!session?.id || !isMobileApp()) return;
+    const renew = () => { if (!document.hidden) mobilePush(session.id, "renew").catch(() => {}); };
+    renew();
+    document.addEventListener("visibilitychange", renew);
+    return () => document.removeEventListener("visibilitychange", renew);
+  }, [session?.id]);
   useEffect(() => setView(null), [appearance.default_view]);
   useEffect(() => {
     if (!session) return;
